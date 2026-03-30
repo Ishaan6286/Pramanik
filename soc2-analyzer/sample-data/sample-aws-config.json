@@ -1,0 +1,89 @@
+{
+  "company_name": "TechStart India Pvt Ltd",
+  "aws_account_id": "123456789012",
+  "region": "ap-south-1",
+  "iam": {
+    "mfa_enabled": false,
+    "users": [
+      {
+        "username": "admin",
+        "mfa_active": false,
+        "last_used": "2024-01-15",
+        "access_keys": 2
+      },
+      {
+        "username": "developer1",
+        "mfa_active": true,
+        "last_used": "2024-03-01",
+        "access_keys": 1
+      }
+    ],
+    "password_policy": {
+      "minimum_length": 8,
+      "require_uppercase": false,
+      "require_numbers": true,
+      "require_symbols": false,
+      "max_password_age": 180
+    },
+    "root_account_mfa": false
+  },
+  "s3": {
+    "buckets": [
+      {
+        "name": "user-uploads-prod",
+        "encryption": false,
+        "public_access": true,
+        "versioning": false,
+        "logging": false
+      },
+      {
+        "name": "company-backups",
+        "encryption": true,
+        "public_access": false,
+        "versioning": true,
+        "logging": true
+      }
+    ]
+  },
+  "cloudtrail": {
+    "enabled": false,
+    "multi_region": false,
+    "log_validation": false
+  },
+  "rds": {
+    "instances": [
+      {
+        "name": "production-db",
+        "encryption": false,
+        "backup_enabled": true,
+        "backup_retention_days": 7,
+        "publicly_accessible": true,
+        "multi_az": false
+      }
+    ]
+  },
+  "vpc": {
+    "flow_logs_enabled": false,
+    "security_groups": [
+      {
+        "name": "default",
+        "inbound_rules": [
+          {
+            "port": 22,
+            "source": "0.0.0.0/0"
+          },
+          {
+            "port": 3306,
+            "source": "0.0.0.0/0"
+          }
+        ]
+      }
+    ]
+  },
+  "guardduty": {
+    "enabled": false
+  },
+  "config_service": {
+    "enabled": false
+  }
+}
