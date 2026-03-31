@@ -149,6 +149,19 @@ async def audit_prep(req: AuditPrepRequest):
 
 # ── DRIFT DETECTION ────────────────────────────────
 
+from datetime import datetime as dt_datetime
+
+
+def _drift_response(success: bool, data: dict = None, error: str = None) -> dict:
+    """Standardized drift detection response format."""
+    return {
+        "status": "success" if success else "error",
+        "timestamp": dt_datetime.utcnow().isoformat(),
+        "data": data or {},
+        "error": error,
+    }
+
+
 class DriftRequest(BaseModel):
     company_name: str
     config: dict
@@ -159,11 +172,33 @@ async def drift(req: DriftRequest):
     try:
         baseline = db.get_baseline(user_id=None, company_name=req.company_name)
         if not baseline:
-            return {"error": "No baseline found. Run an analysis first to establish a baseline."}
+            return _drift_response(False, error="No baseline found. Run an analysis first to establish a baseline.")
+        
         drift_result = detect_drift(req.config, baseline["config"])
-        return drift_result
+        
+        # Save drift analysis to history (non-blocking)
+        try:
+            db.save_drift_analysis(
+                user_id=None,
+                company_name=req.company_name,
+                drift_result=drift_result,
+                baseline_id=baseline.get("id")
+            )
+            # Create alerts for critical regressions
+            critical_changes = [c for c in drift_result.get("changes", []) if c.get("severity") == "CRITICAL"]
+            for change in critical_changes:
+                db.create_drift_alert(
+                    user_id=None,
+                    company_name=req.company_name,
+                    change=change
+                )
+        except Exception as e:
+            print(f"Drift history save failed (non-critical): {e}")
+        
+        return _drift_response(True, data=drift_result)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Drift detection failed: {str(e)}")
+        print(f"Drift detection error: {e}")
+        return _drift_response(False, error=f"Drift detection failed: {str(e)}")
 
 
 # ── SCAN HISTORY ───────────────────────────────────
