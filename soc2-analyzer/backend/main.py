@@ -1,18 +1,21 @@
 import json
+from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from soc2_controls import run_all_checks, get_benchmark
 from framework_mappings import calculate_crvs, get_framework_summary
+from drift_detector import detect_drift
 
 # AI services — Bedrock primary, Groq fallback
 import bedrock_service
 import groq_service
+import db
 
 app = FastAPI(title="SOC2 Analyzer API")
 
@@ -70,7 +73,7 @@ async def analyze(config: UploadFile = File(...)):
     # Framework scores (SOC2 + ISO 27001 + HIPAA)
     framework_scores = get_framework_summary(result["results"])
 
-    return {
+    response_data = {
         "company_name": company_name,
         "score": result["score"],
         "passed": result["passed"],
@@ -80,6 +83,29 @@ async def analyze(config: UploadFile = File(...)):
         "priority_fixes": priority_fixes,
         "framework_scores": framework_scores,
     }
+
+    # Save to Supabase (non-blocking — don't fail the request if DB is down)
+    try:
+        db.save_scan(
+            user_id=None,
+            company_name=company_name,
+            industry=industry,
+            score=result["score"],
+            passed=result["passed"],
+            total=result["total"],
+            results=enriched,
+            priority_fixes=priority_fixes,
+            framework_scores=framework_scores,
+            benchmark=benchmark,
+            config=aws_config,
+        )
+        # Save baseline for drift detection
+        db.save_baseline(user_id=None, company_name=company_name, config=aws_config)
+        print(f"Scan saved to Supabase for {company_name}")
+    except Exception as e:
+        print(f"Supabase save failed (non-critical): {e}")
+
+    return response_data
 
 
 class PolicyRequest(BaseModel):
@@ -98,6 +124,7 @@ async def policies(req: PolicyRequest):
             result = groq_service.generate_policies(req.company_name)
             return result
         except Exception as e2:
+            print(f"Groq policies also failed: {e2}")
             raise HTTPException(status_code=500, detail=f"Policy generation failed: {str(e2)}")
 
 
@@ -118,3 +145,53 @@ async def audit_prep(req: AuditPrepRequest):
             return result
         except Exception as e2:
             raise HTTPException(status_code=500, detail=f"Audit prep failed: {str(e2)}")
+
+
+# ── DRIFT DETECTION ────────────────────────────────
+
+class DriftRequest(BaseModel):
+    company_name: str
+    config: dict
+
+
+@app.post("/api/drift")
+async def drift(req: DriftRequest):
+    try:
+        baseline = db.get_baseline(user_id=None, company_name=req.company_name)
+        if not baseline:
+            return {"error": "No baseline found. Run an analysis first to establish a baseline."}
+        drift_result = detect_drift(req.config, baseline["config"])
+        return drift_result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Drift detection failed: {str(e)}")
+
+
+# ── SCAN HISTORY ───────────────────────────────────
+
+@app.get("/api/scans")
+async def list_scans():
+    try:
+        scans = db.get_scans(user_id=None)
+        # Return summary only (not full results) for list view
+        return [
+            {
+                "id": s["id"],
+                "company_name": s["company_name"],
+                "score": s["score"],
+                "passed": s["passed"],
+                "total": s["total"],
+                "created_at": s["created_at"],
+            }
+            for s in scans
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch scans: {str(e)}")
+
+
+@app.get("/api/scans/{scan_id}")
+async def get_scan(scan_id: str):
+    try:
+        scan = db.get_scan(scan_id)
+        return scan
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch scan: {str(e)}")

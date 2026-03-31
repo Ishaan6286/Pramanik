@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Shield, ArrowLeft, BarChart3, FileText, TrendingUp, HelpCircle, LogOut, Zap, Globe } from "lucide-react";
+import { Shield, ArrowLeft, BarChart3, FileText, TrendingUp, HelpCircle, LogOut, Zap, Globe, GitCompare } from "lucide-react";
 import ControlCard from "./ControlCard";
 import PolicyViewer from "./PolicyViewer";
 import PDFExport from "./PDFExport";
@@ -8,6 +8,7 @@ import AuditPrep from "./AuditPrep";
 import ThemeToggle from "./ThemeToggle";
 import PriorityFix from "./PriorityFix";
 import FrameworkScores from "./FrameworkScores";
+import DriftView from "./DriftView";
 
 export default function Dashboard({ data, config, onReset, user, onLogout }) {
   const [activeTab, setActiveTab] = useState("controls");
@@ -175,6 +176,17 @@ export default function Dashboard({ data, config, onReset, user, onLogout }) {
             <FileText className="w-4 h-4" />
             Policies
           </button>
+          <button
+            onClick={() => setActiveTab("drift")}
+            className="pb-3 text-sm font-medium flex items-center gap-2"
+            style={{
+              color: activeTab === "drift" ? "var(--accent)" : "var(--text-muted)",
+              borderBottom: activeTab === "drift" ? "2px solid var(--accent)" : "2px solid transparent"
+            }}
+          >
+            <GitCompare className="w-4 h-4" />
+            Drift
+          </button>
         </div>
 
         {/* Tab Content */}
@@ -203,6 +215,9 @@ export default function Dashboard({ data, config, onReset, user, onLogout }) {
           )}
           {activeTab === "policies" && (
             <PolicyViewer companyName={data.company_name} config={config} />
+          )}
+          {activeTab === "drift" && (
+            <DriftView companyName={data.company_name} config={config} />
           )}
         </div>
       </div>

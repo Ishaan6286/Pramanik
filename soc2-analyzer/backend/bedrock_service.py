@@ -9,7 +9,7 @@ import json
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 
-REGION = os.getenv("AWS_REGION", "us-east-1")
+REGION = os.getenv("AWS_REGION", "ap-south-1")
 MODEL_ID = "amazon.nova-micro-v1:0"
 
 
