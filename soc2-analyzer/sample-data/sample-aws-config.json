@@ -1,7 +1,34 @@
 {
   "company_name": "TechStart India Pvt Ltd",
+  "industry": "saas_startup",
   "aws_account_id": "123456789012",
   "region": "ap-south-1",
+
+  "organization": {
+    "security_officer_assigned": false,
+    "security_policy_exists": false,
+    "board_oversight": false,
+    "background_checks": false,
+    "security_training": false,
+    "acceptable_use_policy": false,
+    "security_communication_plan": false,
+    "incident_reporting_process": false,
+    "privacy_policy_published": true,
+    "security_page_published": false,
+    "breach_notification_process": false,
+    "risk_register": false,
+    "threat_model": false,
+    "remediation_tracking": false,
+    "control_documentation": false,
+    "change_management_process": false,
+    "output_validation": false,
+    "data_processing_agreement": false,
+    "consent_management": false,
+    "data_subject_request_process": false,
+    "retention_policy": false,
+    "cross_border_transfer_policy": false
+  },
+
   "iam": {
     "mfa_enabled": false,
     "users": [
@@ -16,6 +43,12 @@
         "mfa_active": true,
         "last_used": "2024-03-01",
         "access_keys": 1
+      },
+      {
+        "username": "intern-temp",
+        "mfa_active": false,
+        "last_used": "2023-06-01",
+        "access_keys": 1
       }
     ],
     "password_policy": {
@@ -25,8 +58,10 @@
       "require_symbols": false,
       "max_password_age": 180
     },
-    "root_account_mfa": false
+    "root_account_mfa": false,
+    "roles_defined": false
   },
+
   "s3": {
     "buckets": [
       {
@@ -34,22 +69,41 @@
         "encryption": false,
         "public_access": true,
         "versioning": false,
-        "logging": false
+        "logging": false,
+        "enforce_ssl": false,
+        "classification_tag": false,
+        "lifecycle_policy": false
       },
       {
         "name": "company-backups",
         "encryption": true,
         "public_access": false,
         "versioning": true,
-        "logging": true
+        "logging": true,
+        "enforce_ssl": true,
+        "classification_tag": true,
+        "lifecycle_policy": true
+      },
+      {
+        "name": "customer-data-analytics",
+        "encryption": false,
+        "public_access": false,
+        "versioning": false,
+        "logging": false,
+        "enforce_ssl": false,
+        "classification_tag": false,
+        "lifecycle_policy": false
       }
     ]
   },
+
   "cloudtrail": {
     "enabled": false,
     "multi_region": false,
-    "log_validation": false
+    "log_validation": false,
+    "data_events": false
   },
+
   "rds": {
     "instances": [
       {
@@ -62,28 +116,54 @@
       }
     ]
   },
+
   "vpc": {
     "flow_logs_enabled": false,
     "security_groups": [
       {
         "name": "default",
         "inbound_rules": [
-          {
-            "port": 22,
-            "source": "0.0.0.0/0"
-          },
-          {
-            "port": 3306,
-            "source": "0.0.0.0/0"
-          }
+          { "port": 22, "source": "0.0.0.0/0" },
+          { "port": 3306, "source": "0.0.0.0/0" }
         ]
       }
     ]
   },
-  "guardduty": {
-    "enabled": false
+
+  "guardduty": { "enabled": false },
+  "config_service": { "enabled": false, "rules_configured": false },
+  "security_hub": { "enabled": false },
+  "inspector": { "enabled": false },
+  "macie": { "enabled": false },
+  "kms": { "keys_configured": false },
+  "waf": { "enabled": false },
+  "shield": { "enabled": false },
+  "trusted_advisor": { "enabled": false },
+  "access_analyzer": { "enabled": false },
+  "cloudfront": { "https_enforced": true },
+  "elb": { "ssl_enabled": true },
+  "autoscaling": { "enabled": false },
+  "systems_manager": { "patch_compliance": false },
+  "api_gateway": { "request_validation": false },
+  "xray": { "enabled": false },
+  "sns": { "security_alerts_configured": false },
+  "cloudwatch": {
+    "alarm_configured": false,
+    "log_groups_configured": false
   },
-  "config_service": {
-    "enabled": false
+  "route53": { "health_checks": false },
+  "codepipeline": { "enabled": false },
+
+  "incident_response": {
+    "plan_exists": false,
+    "contact_list": false,
+    "runbooks": false
+  },
+
+  "disaster_recovery": {
+    "plan_exists": false,
+    "cross_region_backup": false,
+    "rto_defined": false,
+    "rpo_defined": false
   }
 }

@@ -7,7 +7,6 @@ export default function PDFExport({ data }) {
     const pageWidth = doc.internal.pageSize.getWidth();
     let y = 20;
 
-    // Title
     doc.setFontSize(22);
     doc.setTextColor(41, 98, 255);
     doc.text("SOC 2 Compliance Report", pageWidth / 2, y, { align: "center" });
@@ -18,7 +17,6 @@ export default function PDFExport({ data }) {
     doc.text(data.company_name, pageWidth / 2, y, { align: "center" });
     y += 15;
 
-    // Score
     doc.setFontSize(16);
     doc.setTextColor(0);
     doc.text(`Compliance Score: ${data.score}%`, 20, y);
@@ -28,19 +26,13 @@ export default function PDFExport({ data }) {
     doc.text(`${data.passed} of ${data.total} controls passed`, 20, y);
     y += 15;
 
-    // Separator
     doc.setDrawColor(200);
     doc.line(20, y, pageWidth - 20, y);
     y += 10;
 
-    // Controls
     data.results.forEach((control) => {
-      if (y > 260) {
-        doc.addPage();
-        y = 20;
-      }
+      if (y > 260) { doc.addPage(); y = 20; }
 
-      // Control header
       doc.setFontSize(12);
       doc.setTextColor(0);
       const status = control.passed ? "[PASS]" : "[FAIL]";
@@ -55,10 +47,7 @@ export default function PDFExport({ data }) {
 
       if (!control.passed && control.issues.length > 0) {
         control.issues.forEach((issue) => {
-          if (y > 270) {
-            doc.addPage();
-            y = 20;
-          }
+          if (y > 270) { doc.addPage(); y = 20; }
           doc.setTextColor(180, 50, 50);
           const lines = doc.splitTextToSize(`- ${issue}`, pageWidth - 50);
           doc.text(lines, 30, y);
@@ -71,10 +60,7 @@ export default function PDFExport({ data }) {
           doc.text("Fix Steps:", 30, y);
           y += 5;
           control.fix_steps.forEach((step, i) => {
-            if (y > 270) {
-              doc.addPage();
-              y = 20;
-            }
+            if (y > 270) { doc.addPage(); y = 20; }
             doc.setTextColor(80);
             const lines = doc.splitTextToSize(`${i + 1}. ${step}`, pageWidth - 55);
             doc.text(lines, 35, y);
@@ -82,11 +68,9 @@ export default function PDFExport({ data }) {
           });
         }
       }
-
       y += 8;
     });
 
-    // Footer
     doc.setFontSize(8);
     doc.setTextColor(150);
     doc.text(
@@ -102,10 +86,11 @@ export default function PDFExport({ data }) {
   return (
     <button
       onClick={generatePDF}
-      className="px-5 py-2.5 bg-green-600 hover:bg-green-500 rounded-lg font-semibold transition-all flex items-center gap-2"
+      className="px-4 py-2 rounded-lg font-medium text-sm text-white flex items-center gap-2"
+      style={{ background: "#22c55e" }}
     >
       <Download className="w-4 h-4" />
-      Export PDF Report
+      Export PDF
     </button>
   );
 }

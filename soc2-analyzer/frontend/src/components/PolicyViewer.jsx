@@ -14,14 +14,9 @@ export default function PolicyViewer({ companyName, config }) {
       const response = await fetch('http://localhost:3001/api/policies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          company_name: companyName,
-          aws_config: config
-        })
+        body: JSON.stringify({ company_name: companyName, aws_config: config })
       });
-
       if (!response.ok) throw new Error('Policy generation failed');
-
       const data = await response.json();
       setPolicies(data.policies);
     } catch (err) {
@@ -33,57 +28,62 @@ export default function PolicyViewer({ companyName, config }) {
 
   if (!policies) {
     return (
-      <div className="border border-gray-800 rounded-xl p-8 text-center">
-        <FileText className="w-12 h-12 text-blue-400 mx-auto mb-4" />
+      <div className="glass p-10 text-center fade-in">
+        <FileText className="w-14 h-14 mx-auto mb-4" style={{ color: "var(--accent)" }} />
         <h3 className="text-xl font-semibold mb-2">Generate SOC 2 Policies</h3>
-        <p className="text-gray-500 mb-6">
+        <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>
           AI will create audit-ready policy documents tailored to {companyName}
         </p>
         <button
           onClick={generatePolicies}
           disabled={loading}
-          className="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg font-semibold transition-all flex items-center gap-2 mx-auto"
+          className="px-6 py-3 rounded-lg font-semibold text-white inline-flex items-center gap-2"
+          style={{ background: "var(--accent)" }}
         >
           {loading ? (
             <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Generating Policies...
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Generating...
             </>
           ) : (
             <>
-              <FileText className="w-5 h-5" />
+              <FileText className="w-4 h-4" />
               Generate Policies
             </>
           )}
         </button>
-        {error && <p className="text-red-400 mt-4">{error}</p>}
+        {error && <p className="text-red-500 mt-4 text-sm">{error}</p>}
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="fade-in">
       {/* Policy Tabs */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 overflow-x-auto">
         {policies.map((policy, i) => (
           <button
             key={i}
             onClick={() => setActivePolicy(i)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activePolicy === i
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
+            className="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap"
+            style={{
+              background: activePolicy === i ? "var(--accent)" : "var(--bg-hover)",
+              color: activePolicy === i ? "white" : "var(--text-secondary)",
+            }}
           >
             {policy.title}
           </button>
         ))}
       </div>
 
-      {/* Policy Content */}
-      <div className="border border-gray-800 rounded-xl p-6 bg-gray-900">
-        <h3 className="text-xl font-bold mb-4">{policies[activePolicy].title}</h3>
-        <div className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
+      {/* Policy Content — document-like feel */}
+      <div className="glass p-8">
+        <h3 className="text-xl font-bold mb-1">{policies[activePolicy].title}</h3>
+        <div className="h-0.5 rounded mb-6" style={{ background: "var(--accent)", width: "60px" }} />
+        <div
+          className="text-sm leading-relaxed whitespace-pre-wrap"
+          style={{ color: "var(--text-secondary)" }}
+        >
           {policies[activePolicy].content}
         </div>
       </div>

@@ -1,3 +1,80 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Theme variables */
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #111118;
+  --bg-card: #16161f;
+  --bg-hover: #1e1e2a;
+  --text-primary: #f0f0f5;
+  --text-secondary: #9090a0;
+  --text-muted: #606070;
+  --border: #2a2a35;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+}
+
+.light {
+  --bg-primary: #f8f9fc;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-hover: #f1f3f8;
+  --text-primary: #111118;
+  --text-secondary: #555566;
+  --text-muted: #888899;
+  --border: #e2e4ea;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Smooth transitions */
+* {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
+.light ::-webkit-scrollbar-thumb { background: #ccc; }
+
+/* Score ring animation */
+@keyframes scoreReveal {
+  from { stroke-dashoffset: 283; }
+}
+.score-ring {
+  animation: scoreReveal 1.2s ease-out forwards;
+}
+
+/* Fade in */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeInUp 0.5s ease-out forwards; }
+.fade-in-d1 { animation: fadeInUp 0.5s ease-out 0.1s forwards; opacity: 0; }
+.fade-in-d2 { animation: fadeInUp 0.5s ease-out 0.2s forwards; opacity: 0; }
+.fade-in-d3 { animation: fadeInUp 0.5s ease-out 0.3s forwards; opacity: 0; }
+.fade-in-d4 { animation: fadeInUp 0.5s ease-out 0.4s forwards; opacity: 0; }
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Glass card */
+.glass {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
