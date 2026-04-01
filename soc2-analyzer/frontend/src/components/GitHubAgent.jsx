@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
-import { Github, Code, Shield, AlertTriangle, FileText, Zap, Check, ChevronDown, ChevronRight, Eye, ExternalLink, Package } from "lucide-react";
+import { Github, Code, Shield, AlertTriangle, FileText, Zap, Check, ChevronDown, ChevronRight, Eye, ExternalLink, Package, Wrench, Loader, GitPullRequest } from "lucide-react";
+import { API_URL } from "../config";
 
 const AGENTS = [
   { id: "code",     name: "Code Agent",      desc: "Scanning source files",          icon: Code,          color: "#4F46E5" },
@@ -48,8 +49,34 @@ export default function GitHubAgent({ onResults, selectedFrameworks, loading, se
   const [error, setError]           = useState(null);
   const [results, setResults]       = useState(null);
   const [expanded, setExpanded]     = useState({});
+  const [fixingKey, setFixingKey]   = useState(null);
+  const [fixResults, setFixResults] = useState({});
   const [agentStages, setAgentStages] = useState(AGENTS.map(a => ({ ...a, status: "pending", progress: 0 })));
   const timerRef = useRef(null);
+
+  const handleAutoFix = async (file, finding, idx) => {
+    const key = `${file}:${idx}`;
+    if (!token.trim()) {
+      setFixResults(p => ({ ...p, [key]: { error: "GitHub token with repo scope required for auto-fix" } }));
+      return;
+    }
+    setFixingKey(key);
+    setFixResults(p => ({ ...p, [key]: {} }));
+    try {
+      const resp = await fetch(`${API_URL}/api/auto-fix`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo_url: repoUrl.trim(), token: token.trim(), file_path: file, finding }),
+      });
+      if (!resp.ok) { const e = await resp.json(); throw new Error(e.detail || "Auto-fix failed"); }
+      const data = await resp.json();
+      setFixResults(p => ({ ...p, [key]: { pr_url: data.pr_url, pr_number: data.pr_number } }));
+    } catch (e) {
+      setFixResults(p => ({ ...p, [key]: { error: e.message } }));
+    } finally {
+      setFixingKey(null);
+    }
+  };
 
   const startAnimation = () => {
     let cur = 0, prog = 0;
@@ -85,7 +112,7 @@ export default function GitHubAgent({ onResults, selectedFrameworks, loading, se
     setExpanded({});
     startAnimation();
     try {
-      const resp = await fetch("http://localhost:3001/api/scan-github", {
+      const resp = await fetch(`${API_URL}/api/scan-github`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ repo_url: repoUrl.trim(), token: token.trim(), selected_frameworks: selectedFrameworks }),
       });
@@ -408,6 +435,58 @@ export default function GitHubAgent({ onResults, selectedFrameworks, loading, se
                                     Fix: {finding.fix}
                                   </p>
                                 )}
+
+                                {/* Auto-Fix PR Button */}
+                                {(() => {
+                                  const fKey = `${file}:${idx}`;
+                                  const fr = fixResults[fKey];
+                                  const isFixing = fixingKey === fKey;
+
+                                  if (fr?.pr_url) {
+                                    return (
+                                      <a
+                                        href={fr.pr_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{
+                                          display: "inline-flex", alignItems: "center", gap: 6,
+                                          marginTop: 8, padding: "6px 14px", borderRadius: 8,
+                                          background: "#F0FDF4", border: "1px solid #BBF7D0",
+                                          color: "#059669", fontSize: 11, fontWeight: 600,
+                                          textDecoration: "none", cursor: "pointer",
+                                        }}
+                                      >
+                                        <GitPullRequest size={12} /> PR #{fr.pr_number} opened — View on GitHub
+                                      </a>
+                                    );
+                                  }
+
+                                  return (
+                                    <div style={{ marginTop: 8 }}>
+                                      <button
+                                        onClick={() => handleAutoFix(file, finding, idx)}
+                                        disabled={isFixing || !!fixingKey}
+                                        style={{
+                                          display: "inline-flex", alignItems: "center", gap: 6,
+                                          padding: "6px 14px", borderRadius: 8,
+                                          background: isFixing ? "#F3F4F6" : "#059669",
+                                          color: isFixing ? "#6B7280" : "#FFFFFF",
+                                          fontSize: 11, fontWeight: 600, border: "none",
+                                          cursor: isFixing || fixingKey ? "not-allowed" : "pointer",
+                                          opacity: fixingKey && !isFixing ? 0.5 : 1,
+                                        }}
+                                      >
+                                        {isFixing
+                                          ? <><Loader size={11} style={{ animation: "spin 1s linear infinite" }} /> Creating PR…</>
+                                          : <><Wrench size={11} /> Auto-Fix &amp; Open PR</>
+                                        }
+                                      </button>
+                                      {fr?.error && (
+                                        <p style={{ fontSize: 11, color: "#DC2626", marginTop: 4 }}>{fr.error}</p>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
 
                                 <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
                                   {finding.controls?.map(c => (

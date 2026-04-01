@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { API_URL } from "../config";
 import { Send, MessageCircle, Upload, Image, FileText, Mic } from "lucide-react";
 import "./ComplianceChatBot.css";
 
@@ -106,7 +107,7 @@ export default function ComplianceChatBot() {
       formData.append("fileCount", attachedFiles.length);
 
       // Call backend chat endpoint with files
-      const response = await fetch("http://localhost:3001/api/pramanik/chat", {
+      const response = await fetch(`${API_URL}/api/pramanik/chat`, {
         method: "POST",
         body: formData,
       });

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { API_URL } from "../config";
 import { Send, Paperclip, Image, FileText, Mic, X, Check } from "lucide-react";
 import "./PopupChatPanel.css";
 
@@ -113,7 +114,7 @@ export default function PopupChatPanel({ onClose }) {
       });
       formData.append("fileCount", attachedFiles.length);
 
-      const response = await fetch("http://localhost:3001/api/pramanik/chat", {
+      const response = await fetch(`${API_URL}/api/pramanik/chat`, {
         method: "POST",
         body: formData,
       });
