@@ -10,7 +10,12 @@ import re
 import base64
 import json
 import os
+import tempfile
+import shutil
+import subprocess
+from pathlib import Path
 from typing import Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import urllib.request
 import urllib.error
 
@@ -171,6 +176,36 @@ COMPLIANCE_PATTERNS = [
         "message": "CloudTrail logging disabled in infrastructure code — no audit trail.",
         "fix": "Enable CloudTrail with multi-region and log file validation enabled.",
     },
+    {
+        "id": "NOSQL-001",
+        "name": "NoSQL Injection Risk",
+        "pattern": r'(?i)(find|findOne|findMany|update|delete|aggregate)\s*\(\s*\{[^}]*req\.(body|query|params)|\$where\s*:\s*["\']|\.find\s*\(\s*\{[^}]*\+',
+        "controls": ["CC6.8", "CC5.2"],
+        "frameworks": ["soc2", "iso27001", "hipaa", "dpdp"],
+        "severity": "CRITICAL",
+        "message": "NoSQL query built with unsanitized user input — allows authentication bypass and data exfiltration.",
+        "fix": "Sanitize all inputs before MongoDB/NoSQL operations. Use mongoose-sanitize or express-mongo-sanitize.",
+    },
+    {
+        "id": "EVAL-001",
+        "name": "eval() with User Input (SSJI)",
+        "pattern": r'eval\s*\([^)]*req\.(body|query|params)|eval\s*\([^)\n]*\+[^)\n]*\)|new\s+Function\s*\([^)]*req\.',
+        "controls": ["CC6.8", "CC5.2"],
+        "frameworks": ["soc2", "iso27001"],
+        "severity": "CRITICAL",
+        "message": "eval() called with user-controlled input — Server-Side JavaScript Injection (SSJI).",
+        "fix": "Never use eval() with user input. Use JSON.parse() for data, avoid dynamic code execution.",
+    },
+    {
+        "id": "XSS-001",
+        "name": "Cross-Site Scripting (XSS) Risk",
+        "pattern": r'innerHTML\s*=\s*[^;\n]*req\.(body|query|params)|document\.write\s*\([^)]*req\.|res\.send\s*\([^)]*req\.(body|query|params)|res\.render\s*\([^,]+,\s*\{[^}]*req\.(body|query|params)',
+        "controls": ["CC6.8", "CC5.2"],
+        "frameworks": ["soc2", "iso27001", "hipaa", "dpdp"],
+        "severity": "HIGH",
+        "message": "User input reflected into HTML response without sanitization — XSS vulnerability.",
+        "fix": "Sanitize all user input with DOMPurify (client) or xss-clean (server). Use templating engines with auto-escaping.",
+    },
 ]
 
 # ── Policy Document Checks ────────────────────────────────────────────────────
@@ -188,17 +223,35 @@ POLICY_DOCS = [
     {"path": "CONTRIBUTING.md", "name": "Contribution Guidelines", "control": "CC6.3"},
 ]
 
-# Files/dirs to skip
+# Directories to skip entirely — never contain violations, waste API calls
 SKIP_DIRS = {
     "node_modules", ".git", "vendor", "dist", "build", ".next",
-    "__pycache__", ".venv", "venv", "env", "migrations", "test", "tests",
-    "__tests__", "coverage", ".cache",
+    "__pycache__", ".venv", "venv", "env", "migrations",
+    "coverage", ".cache", ".nyc_output", ".parcel-cache",
+    "storybook-static", "public", "static", "assets",
+}
+
+# Specific filenames to skip — lock files, minified files, source maps
+# These are large, auto-generated, and never contain real violations
+SKIP_FILENAMES = {
+    "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "composer.lock",
+    "Gemfile.lock", "poetry.lock", "Pipfile.lock", "go.sum",
+}
+
+# File suffixes to skip
+SKIP_SUFFIXES = {".min.js", ".min.css", ".map", ".snap", ".lock", ".sum"}
+
+# High-risk files — scanned FIRST regardless of position in tree
+HIGH_PRIORITY_PATTERNS = {
+    ".env", "config", "secret", "credential", "auth", "key",
+    "password", "token", "database", "db", "routes", "middleware",
+    "terraform", "cloudformation", "iam", "security",
 }
 
 SCANNABLE_EXTENSIONS = {
     ".py", ".js", ".ts", ".jsx", ".tsx", ".go", ".java", ".rb", ".php",
     ".yaml", ".yml", ".json", ".tf", ".hcl", ".sh", ".bash", ".cs",
-    ".env", ".env.example", ".config",
+    ".env", ".env.example", ".config", ".kt", ".rs", ".swift", ".cpp", ".c",
 }
 
 
@@ -347,9 +400,276 @@ def detect_aws_trails_in_code(findings: list, all_files: list) -> dict:
     return trail_info
 
 
+# ── Semgrep Rule → SOC 2 Control Mapping ─────────────────────────────────────
+# Maps OWASP Top 10 IDs (present in semgrep rule IDs) to SOC 2 controls + frameworks
+
+SEMGREP_RULE_MAP = {
+    # Injection (A03) — SQL, NoSQL, command, XSS
+    "injection": {"controls": ["CC6.8", "CC5.2"], "frameworks": ["soc2", "iso27001", "hipaa", "dpdp"], "severity": "CRITICAL"},
+    "sql": {"controls": ["CC6.8", "CC5.2"], "frameworks": ["soc2", "iso27001", "hipaa", "dpdp"], "severity": "CRITICAL"},
+    "nosql": {"controls": ["CC6.8", "CC5.2"], "frameworks": ["soc2", "iso27001", "hipaa", "dpdp"], "severity": "CRITICAL"},
+    "xss": {"controls": ["CC6.8", "CC5.2"], "frameworks": ["soc2", "iso27001", "hipaa", "dpdp"], "severity": "HIGH"},
+    "eval": {"controls": ["CC6.8", "CC5.2"], "frameworks": ["soc2", "iso27001"], "severity": "CRITICAL"},
+    "exec": {"controls": ["CC6.8", "CC5.2"], "frameworks": ["soc2", "iso27001"], "severity": "CRITICAL"},
+    "command": {"controls": ["CC6.8", "CC5.2"], "frameworks": ["soc2", "iso27001"], "severity": "CRITICAL"},
+    "ssrf": {"controls": ["CC6.6", "CC6.8"], "frameworks": ["soc2", "iso27001"], "severity": "HIGH"},
+    # Cryptographic Failures (A02)
+    "crypto": {"controls": ["CC6.7", "CC9.2"], "frameworks": ["soc2", "iso27001", "hipaa"], "severity": "HIGH"},
+    "tls": {"controls": ["CC6.7"], "frameworks": ["soc2", "iso27001", "hipaa", "dpdp"], "severity": "HIGH"},
+    "hash": {"controls": ["CC6.2", "CC9.2"], "frameworks": ["soc2", "iso27001", "hipaa"], "severity": "HIGH"},
+    "weak": {"controls": ["CC6.7", "CC9.2"], "frameworks": ["soc2", "iso27001"], "severity": "HIGH"},
+    # Secrets / Credentials (A02)
+    "secret": {"controls": ["CC6.1", "CC9.2"], "frameworks": ["soc2", "iso27001", "hipaa", "dpdp"], "severity": "CRITICAL"},
+    "hardcoded": {"controls": ["CC6.1", "CC6.2"], "frameworks": ["soc2", "iso27001", "hipaa", "dpdp"], "severity": "CRITICAL"},
+    "password": {"controls": ["CC6.1", "CC6.2"], "frameworks": ["soc2", "iso27001", "hipaa", "dpdp"], "severity": "CRITICAL"},
+    "token": {"controls": ["CC6.1"], "frameworks": ["soc2", "iso27001"], "severity": "HIGH"},
+    # Broken Access Control (A01)
+    "auth": {"controls": ["CC6.1", "CC6.3"], "frameworks": ["soc2", "iso27001", "hipaa"], "severity": "HIGH"},
+    "idor": {"controls": ["CC6.3"], "frameworks": ["soc2", "iso27001"], "severity": "HIGH"},
+    "jwt": {"controls": ["CC6.1", "CC6.2"], "frameworks": ["soc2", "iso27001"], "severity": "HIGH"},
+    # Security Misconfiguration (A05)
+    "cors": {"controls": ["CC6.6"], "frameworks": ["soc2", "iso27001"], "severity": "MEDIUM"},
+    "debug": {"controls": ["CC6.8", "CC5.1"], "frameworks": ["soc2", "iso27001"], "severity": "HIGH"},
+    "error": {"controls": ["CC7.2", "CC7.3"], "frameworks": ["soc2", "iso27001"], "severity": "MEDIUM"},
+    # Logging (A09)
+    "log": {"controls": ["CC7.2", "C1.1"], "frameworks": ["soc2", "iso27001", "hipaa"], "severity": "MEDIUM"},
+    # Default fallback
+    "default": {"controls": ["CC6.8"], "frameworks": ["soc2", "iso27001"], "severity": "MEDIUM"},
+}
+
+
+def _semgrep_available() -> bool:
+    """Check if semgrep is installed on this system."""
+    return shutil.which("semgrep") is not None
+
+
+def _map_semgrep_rule(rule_id: str) -> dict:
+    """Map a semgrep rule ID to SOC 2 controls and severity."""
+    rule_lower = rule_id.lower()
+    for keyword, mapping in SEMGREP_RULE_MAP.items():
+        if keyword in rule_lower:
+            return mapping
+    return SEMGREP_RULE_MAP["default"]
+
+
+def scan_with_semgrep(file_contents: dict) -> list:
+    """
+    Run semgrep on fetched file contents.
+    file_contents: {path: content_str}
+    Returns list of findings in our standard format.
+    """
+    if not _semgrep_available():
+        return []
+
+    findings = []
+    tmpdir = tempfile.mkdtemp(prefix="complianceai_")
+
+    try:
+        # Write files to temp directory
+        for path, content in file_contents.items():
+            full_path = Path(tmpdir) / path
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                full_path.write_text(content, encoding="utf-8", errors="replace")
+            except Exception:
+                pass
+
+        # Run semgrep with OWASP Top 10 + secrets rulesets
+        result = subprocess.run(
+            [
+                "semgrep",
+                "--config", "p/owasp-top-ten",
+                "--config", "p/secrets",
+                "--json",
+                "--quiet",
+                "--no-git-ignore",
+                "--timeout", "30",
+                tmpdir,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+
+        if result.stdout:
+            data = json.loads(result.stdout)
+            for r in data.get("results", []):
+                rule_id = r.get("check_id", "semgrep.unknown")
+                mapping = _map_semgrep_rule(rule_id)
+                # Get relative path (strip tmpdir prefix)
+                abs_path = r.get("path", "")
+                rel_path = abs_path.replace(tmpdir + "/", "").replace(tmpdir + "\\", "")
+
+                findings.append({
+                    "pattern_id": f"SEMGREP-{rule_id.split('.')[-1].upper()[:12]}",
+                    "name": r.get("extra", {}).get("message", rule_id.split(".")[-1].replace("-", " ").title()),
+                    "file": rel_path,
+                    "line": r.get("start", {}).get("line", 0),
+                    "line_content": r.get("extra", {}).get("lines", "").strip()[:120],
+                    "controls": mapping["controls"],
+                    "frameworks": mapping["frameworks"],
+                    "severity": mapping["severity"],
+                    "message": r.get("extra", {}).get("message", "Semgrep compliance violation detected."),
+                    "fix": r.get("extra", {}).get("fix", "See semgrep rule: " + rule_id),
+                    "source": "semgrep",
+                    "semgrep_rule": rule_id,
+                })
+
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, Exception):
+        pass
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+    return findings
+
+
+# ── OSV Dependency CVE Scanner ────────────────────────────────────────────────
+
+OSV_SEVERITY_MAP = {"CRITICAL": "CRITICAL", "HIGH": "HIGH", "MODERATE": "MEDIUM", "LOW": "LOW"}
+
+
+def _osv_query(package_name: str, version: str, ecosystem: str) -> list:
+    """Query OSV.dev API for known vulnerabilities in a package version. No API key needed."""
+    payload = json.dumps({
+        "version": version,
+        "package": {"name": package_name, "ecosystem": ecosystem},
+    }).encode()
+    req = urllib.request.Request(
+        "https://api.osv.dev/v1/query",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode())
+            return data.get("vulns", [])
+    except Exception:
+        return []
+
+
+def _parse_package_json(content: str) -> dict:
+    """Extract package name→version from package.json dependencies."""
+    try:
+        data = json.loads(content)
+        deps = {}
+        deps.update(data.get("dependencies", {}))
+        deps.update(data.get("devDependencies", {}))
+        # Clean version strings (^1.2.3 → 1.2.3)
+        return {
+            name: ver.lstrip("^~>=").split(" ")[0]
+            for name, ver in deps.items()
+            if isinstance(ver, str) and ver[0].isdigit() or (len(ver) > 1 and ver[1].isdigit())
+        }
+    except Exception:
+        return {}
+
+
+def _parse_requirements_txt(content: str) -> dict:
+    """Extract package name→version from requirements.txt."""
+    deps = {}
+    for line in content.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        # Handle: package==1.2.3, package>=1.2.3, package~=1.2.3
+        for sep in ["==", ">=", "<=", "~=", "!="]:
+            if sep in line:
+                parts = line.split(sep)
+                name = parts[0].strip()
+                ver = parts[1].strip().split(",")[0].strip()
+                deps[name] = ver
+                break
+    return deps
+
+
+def scan_dependencies_osv(owner: str, repo: str, token: Optional[str], all_files: list) -> list:
+    """
+    Check package.json and requirements.txt for known CVEs using OSV.dev (free, no key needed).
+    Returns findings in our standard format.
+    """
+    findings = []
+    dep_files = {
+        "package.json": ("npm", _parse_package_json),
+        "requirements.txt": ("PyPI", _parse_requirements_txt),
+    }
+
+    for file_info in all_files:
+        path = file_info["path"]
+        filename = path.split("/")[-1]
+        if filename not in dep_files:
+            continue
+
+        ecosystem, parser = dep_files[filename]
+        try:
+            content = fetch_file_content(owner, repo, path, token)
+            packages = parser(content)
+        except Exception:
+            continue
+
+        # Query OSV for up to 30 packages in parallel
+        pkg_list = list(packages.items())[:30]
+
+        def _query_pkg(item):
+            name, ver = item
+            return name, ver, _osv_query(name, ver, ecosystem)
+
+        with ThreadPoolExecutor(max_workers=10) as ex:
+            osv_results = list(ex.map(_query_pkg, pkg_list))
+
+        for pkg_name, version, vulns in osv_results:
+            if not vulns:
+                continue
+
+            # Pick the highest severity vuln for this package
+            worst_severity = "LOW"
+            vuln_ids = []
+            for v in vulns:
+                vuln_ids.append(v.get("id", ""))
+                for sev in v.get("database_specific", {}).get("severity", []):
+                    pass
+                # Check severity from affected ranges
+                for affected in v.get("affected", []):
+                    for db_sev in affected.get("database_specific", {}).get("severity", []):
+                        mapped = OSV_SEVERITY_MAP.get(db_sev.upper(), "MEDIUM")
+                        if ["LOW", "MEDIUM", "HIGH", "CRITICAL"].index(mapped) > \
+                           ["LOW", "MEDIUM", "HIGH", "CRITICAL"].index(worst_severity):
+                            worst_severity = mapped
+                # Fallback: check CVSS score
+                if worst_severity == "LOW":
+                    for sev in v.get("severity", []):
+                        score = sev.get("score", "")
+                        if "CRITICAL" in score.upper():
+                            worst_severity = "CRITICAL"
+                        elif "HIGH" in score.upper():
+                            worst_severity = "HIGH"
+
+            vuln_summary = ", ".join(vuln_ids[:3])
+            if len(vuln_ids) > 3:
+                vuln_summary += f" (+{len(vuln_ids)-3} more)"
+
+            findings.append({
+                "pattern_id": "CVE-DEP",
+                "name": f"Vulnerable Dependency: {pkg_name}@{version}",
+                "file": path,
+                "line": 0,
+                "line_content": f'"{pkg_name}": "{version}"',
+                "controls": ["CC6.8", "A1.1"],
+                "frameworks": ["soc2", "iso27001", "hipaa"],
+                "severity": worst_severity,
+                "message": f"{pkg_name}@{version} has {len(vulns)} known CVE(s): {vuln_summary}",
+                "fix": f"Upgrade {pkg_name} to the latest patched version. Run `npm audit fix` or `pip install --upgrade {pkg_name}`.",
+                "source": "osv",
+                "vuln_count": len(vulns),
+                "vuln_ids": vuln_ids[:5],
+            })
+
+    return findings
+
+
 # ── Main Entry Point ──────────────────────────────────────────────────────────
 
-def scan_repository(repo_url: str, token: Optional[str] = None, max_files: int = 150) -> dict:
+def scan_repository(repo_url: str, token: Optional[str] = None, max_files: int = 500) -> dict:
     """
     Full scan of a GitHub repository.
     Returns findings in a format compatible with the rest of the pipeline.
@@ -360,36 +680,78 @@ def scan_repository(repo_url: str, token: Optional[str] = None, max_files: int =
     all_files = fetch_file_tree(owner, repo, token)
     total_files = len(all_files)
 
-    # Filter to scannable files, skip noise directories
-    scannable = []
+    # Filter to scannable files — skip noise dirs, lock files, minified files
+    high_priority = []
+    normal = []
+
     for f in all_files:
         path = f["path"]
+        filename = path.split("/")[-1].lower()
         parts = path.split("/")
-        # Skip if any path component is a noise dir
+
+        # Skip noise directories
         if any(part in SKIP_DIRS for part in parts[:-1]):
             continue
-        ext = "." + path.rsplit(".", 1)[-1] if "." in path else ""
-        if ext in SCANNABLE_EXTENSIONS or path.endswith(".env"):
-            scannable.append(f)
 
-    # Limit to max_files
+        # Skip specific junk filenames and suffixes
+        if filename in SKIP_FILENAMES:
+            continue
+        if any(filename.endswith(sfx) for sfx in SKIP_SUFFIXES):
+            continue
+
+        # Skip very large files (>500KB) — likely generated/binary
+        if f.get("size", 0) > 500_000:
+            continue
+
+        ext = "." + path.rsplit(".", 1)[-1] if "." in path else ""
+        if ext not in SCANNABLE_EXTENSIONS and not path.endswith(".env"):
+            continue
+
+        # Prioritize high-risk files (routes, config, auth, .env, terraform)
+        path_lower = path.lower()
+        if any(p in path_lower for p in HIGH_PRIORITY_PATTERNS):
+            high_priority.append(f)
+        else:
+            normal.append(f)
+
+    # Scan high-priority files first, then normal — up to max_files total
+    scannable = high_priority + normal
     scannable = scannable[:max_files]
 
     existing_paths = {f["path"].lower() for f in all_files}
 
-    # Scan each file
+    # Fetch and scan files in parallel (10 concurrent threads)
     all_findings = []
     files_scanned = 0
     errors = []
+    file_contents = {}  # Keep for semgrep
 
-    for file_info in scannable:
-        try:
-            content = fetch_file_content(owner, repo, file_info["path"], token)
-            findings = scan_file(file_info["path"], content)
-            all_findings.extend(findings)
-            files_scanned += 1
-        except Exception as e:
-            errors.append(str(e))
+    def _fetch_and_scan(file_info):
+        path = file_info["path"]
+        content = fetch_file_content(owner, repo, path, token)
+        return path, content, scan_file(path, content)
+
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(_fetch_and_scan, f): f for f in scannable}
+        for future in as_completed(futures):
+            try:
+                path, content, findings = future.result()
+                file_contents[path] = content
+                all_findings.extend(findings)
+                files_scanned += 1
+            except Exception as e:
+                errors.append(str(e))
+
+    # Semgrep scan (if installed) — runs on all fetched file contents
+    semgrep_findings = scan_with_semgrep(file_contents)
+    all_findings.extend(semgrep_findings)
+
+    # OSV dependency CVE scan — checks package.json and requirements.txt
+    try:
+        dep_findings = scan_dependencies_osv(owner, repo, token, all_files)
+        all_findings.extend(dep_findings)
+    except Exception as e:
+        errors.append(f"OSV scan error: {e}")
 
     # Policy agent check
     policy_status = check_policy_docs(owner, repo, token, existing_paths)
@@ -436,5 +798,12 @@ def scan_repository(repo_url: str, token: Optional[str] = None, max_files: int =
         "affected_frameworks": affected_frameworks,
         "policy_status": policy_status,
         "trail_info": trail_info,
-        "errors": errors[:5],  # Don't flood response
+        "errors": errors[:5],
+        "scanners_used": {
+            "regex": True,
+            "semgrep": _semgrep_available(),
+            "osv_cve": len([f for f in all_findings if f.get("source") == "osv"]) > 0,
+            "semgrep_findings": len(semgrep_findings),
+            "dep_findings": len([f for f in all_findings if f.get("source") == "osv"]),
+        },
     }

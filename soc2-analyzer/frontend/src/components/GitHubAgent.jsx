@@ -1,606 +1,417 @@
-import { useState, useEffect, useRef } from "react";
-import {
-  Github, Code, Shield, AlertTriangle, FileText, Zap,
-  Check, X, ChevronDown, ChevronRight, Eye, ExternalLink
-} from "lucide-react";
+import { useState, useRef } from "react";
+import { Github, Code, Shield, AlertTriangle, FileText, Zap, Check, ChevronDown, ChevronRight, Eye, ExternalLink, Package } from "lucide-react";
 
 const AGENTS = [
-  { id: "code", name: "Code Agent", desc: "Scanning source files for 15 violation patterns", icon: Code, color: "#6366f1" },
-  { id: "policy", name: "Policy Agent", desc: "Checking for security documentation", icon: FileText, color: "#22c55e" },
-  { id: "adversary", name: "Adversary Agent", desc: "Challenging findings like a real auditor", icon: Eye, color: "#f97316" },
-  { id: "ces", name: "CES Engine", desc: "Ranking by Compliance Efficiency Score v2", icon: Zap, color: "#eab308" },
-  { id: "reporter", name: "Reporter Agent", desc: "Compiling cross-framework report", icon: Shield, color: "#ec4899" },
+  { id: "code",     name: "Code Agent",      desc: "Scanning source files",          icon: Code,          color: "#4F46E5" },
+  { id: "policy",   name: "Policy Agent",    desc: "Checking documentation",         icon: FileText,      color: "#059669" },
+  { id: "adversary",name: "Adversary Agent", desc: "Challenging findings",           icon: Eye,           color: "#D97706" },
+  { id: "ces",      name: "CES Engine",      desc: "Scoring by compliance impact",   icon: Zap,           color: "#7C3AED" },
+  { id: "reporter", name: "Reporter",        desc: "Compiling report",               icon: Shield,        color: "#DB2777" },
 ];
 
-const VERDICT_CONFIG = {
-  CONFIRMED: { label: "Confirmed", color: "#ef4444", bg: "#ef444420" },
-  INSUFFICIENT_FIX: { label: "Fix Insufficient", color: "#f97316", bg: "#f9731620" },
-  ESCALATE: { label: "Escalate", color: "#dc2626", bg: "#dc262620" },
-  FALSE_POSITIVE: { label: "False Positive", color: "#6b7280", bg: "#6b728020" },
+const SEV = {
+  CRITICAL: { bg: "#FEF2F2", color: "#DC2626", dot: "#DC2626" },
+  HIGH:     { bg: "#FFFBEB", color: "#D97706", dot: "#D97706" },
+  MEDIUM:   { bg: "#FEFCE8", color: "#CA8A04", dot: "#CA8A04" },
+  LOW:      { bg: "#F0FDF4", color: "#16A34A", dot: "#16A34A" },
 };
 
-const SEVERITY_COLOR = {
-  CRITICAL: "#ef4444",
-  HIGH: "#f97316",
-  MEDIUM: "#eab308",
-  LOW: "#22c55e",
+const VERDICT = {
+  CONFIRMED:        { label: "Confirmed",       color: "#DC2626", bg: "#FEF2F2" },
+  INSUFFICIENT_FIX: { label: "Fix Insufficient", color: "#D97706", bg: "#FFFBEB" },
+  ESCALATE:         { label: "Escalate",         color: "#7C2D12", bg: "#FFF7ED" },
+  FALSE_POSITIVE:   { label: "False Positive",   color: "#6B7280", bg: "#F9FAFB" },
 };
+
+const card = {
+  background: "#FFFFFF",
+  borderRadius: 16,
+  padding: 24,
+  boxShadow: "0 1px 3px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05)",
+  marginBottom: 16,
+};
+
+function SevBadge({ sev }) {
+  const c = SEV[sev] || SEV.LOW;
+  return (
+    <span style={{ padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 700, background: c.bg, color: c.color }}>
+      {sev}
+    </span>
+  );
+}
 
 export default function GitHubAgent({ onResults, selectedFrameworks, loading, setLoading }) {
-  const [repoUrl, setRepoUrl] = useState("");
-  const [token, setToken] = useState("");
-  const [showToken, setShowToken] = useState(false);
-  const [agentStages, setAgentStages] = useState(
-    AGENTS.map(a => ({ ...a, status: "pending", progress: 0 }))
-  );
-  const [scanning, setScanning] = useState(false);
-  const [error, setError] = useState(null);
-  const [results, setResults] = useState(null);
-  const [expandedFiles, setExpandedFiles] = useState({});
+  const [repoUrl, setRepoUrl]       = useState("");
+  const [token, setToken]           = useState("");
+  const [showToken, setShowToken]   = useState(false);
+  const [scanning, setScanning]     = useState(false);
+  const [error, setError]           = useState(null);
+  const [results, setResults]       = useState(null);
+  const [expanded, setExpanded]     = useState({});
+  const [agentStages, setAgentStages] = useState(AGENTS.map(a => ({ ...a, status: "pending", progress: 0 })));
   const timerRef = useRef(null);
 
-  // Animate agent progress while API call runs
-  const startAgentAnimation = () => {
-    let currentAgent = 0;
-    let progress = 0;
-
+  const startAnimation = () => {
+    let cur = 0, prog = 0;
     const tick = () => {
       setAgentStages(prev => {
-        const updated = [...prev];
-        if (currentAgent >= AGENTS.length) return updated;
-
-        progress += Math.random() * 18 + 5;
-
-        if (progress >= 100) {
-          updated[currentAgent] = { ...updated[currentAgent], status: "done", progress: 100 };
-          currentAgent++;
-          progress = 0;
-          if (currentAgent < AGENTS.length) {
-            updated[currentAgent] = { ...updated[currentAgent], status: "running", progress: 0 };
-          }
+        const u = [...prev];
+        if (cur >= AGENTS.length) return u;
+        prog += Math.random() * 18 + 5;
+        if (prog >= 100) {
+          u[cur] = { ...u[cur], status: "done", progress: 100 };
+          cur++; prog = 0;
+          if (cur < AGENTS.length) u[cur] = { ...u[cur], status: "running", progress: 0 };
         } else {
-          updated[currentAgent] = { ...updated[currentAgent], status: "running", progress };
+          u[cur] = { ...u[cur], status: "running", progress: prog };
         }
-        return updated;
+        return u;
       });
-
-      if (currentAgent < AGENTS.length) {
-        timerRef.current = setTimeout(tick, 200 + Math.random() * 150);
-      }
+      if (cur < AGENTS.length) timerRef.current = setTimeout(tick, 200 + Math.random() * 150);
     };
-
-    setAgentStages(prev => {
-      const updated = [...prev];
-      updated[0] = { ...updated[0], status: "running", progress: 0 };
-      return updated;
-    });
-
+    setAgentStages(prev => { const u = [...prev]; u[0] = { ...u[0], status: "running" }; return u; });
     timerRef.current = setTimeout(tick, 300);
   };
 
-  const finishAllAgents = () => {
+  const finishAll = () => {
     clearTimeout(timerRef.current);
     setAgentStages(AGENTS.map(a => ({ ...a, status: "done", progress: 100 })));
   };
 
   const handleScan = async () => {
     if (!repoUrl.trim()) return;
-    setError(null);
-    setResults(null);
-    setScanning(true);
-    setLoading(true);
+    setError(null); setResults(null); setScanning(true); setLoading(true);
     setAgentStages(AGENTS.map(a => ({ ...a, status: "pending", progress: 0 })));
-    setExpandedFiles({});
-
-    startAgentAnimation();
-
+    setExpanded({});
+    startAnimation();
     try {
       const resp = await fetch("http://localhost:3001/api/scan-github", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          repo_url: repoUrl.trim(),
-          token: token.trim(),
-          selected_frameworks: selectedFrameworks,
-        }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo_url: repoUrl.trim(), token: token.trim(), selected_frameworks: selectedFrameworks }),
       });
-
-      finishAllAgents();
-
-      if (!resp.ok) {
-        const err = await resp.json();
-        throw new Error(err.detail || "Scan failed");
-      }
-
-      const data = await resp.json();
-      setResults(data);
-    } catch (err) {
-      setError(err.message);
+      finishAll();
+      if (!resp.ok) { const e = await resp.json(); throw new Error(e.detail || "Scan failed"); }
+      setResults(await resp.json());
+    } catch (e) {
+      setError(e.message);
       setAgentStages(AGENTS.map(a => ({ ...a, status: "pending", progress: 0 })));
-    } finally {
-      setScanning(false);
-      setLoading(false);
-    }
+    } finally { setScanning(false); setLoading(false); }
   };
 
-  // Group raw findings by file
-  const findingsByFile = results
-    ? results.raw_findings.reduce((acc, f) => {
-        const key = f.file || "unknown";
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(f);
-        return acc;
-      }, {})
+  const byFile = results
+    ? (results.raw_findings || []).reduce((acc, f) => { const k = f.file || "unknown"; if (!acc[k]) acc[k] = []; acc[k].push(f); return acc; }, {})
     : {};
 
+  const inp = {
+    width: "100%", padding: "11px 14px", borderRadius: 10,
+    border: "1.5px solid #E5E7EB", fontSize: 14, color: "#111827",
+    background: "#FAFAF8", outline: "none", fontFamily: "inherit",
+  };
+
   return (
-    <div className="w-full max-w-2xl">
-      {/* Input Form */}
-      <div className="glass p-5 mb-5 space-y-3">
-        <div className="flex items-center gap-2 mb-1">
-          <Github className="w-4 h-4" style={{ color: "var(--accent)" }} />
-          <span className="font-semibold text-sm">GitHub Repository Scanner</span>
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } } * { box-sizing: border-box; }`}</style>
+
+      {/* Input card */}
+      <div style={card}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
+          <Github size={18} color="#4F46E5" />
+          <span style={{ fontWeight: 700, fontSize: 16, color: "#111827" }}>GitHub Repository Scanner</span>
         </div>
 
         <input
-          type="text"
+          style={{ ...inp, marginBottom: 10 }}
           placeholder="https://github.com/owner/repository"
           value={repoUrl}
           onChange={e => setRepoUrl(e.target.value)}
           onKeyDown={e => e.key === "Enter" && handleScan()}
-          className="w-full px-3 py-2 rounded-lg text-sm font-mono"
-          style={{
-            background: "var(--bg-secondary)",
-            border: "1px solid var(--border)",
-            color: "var(--text-primary)",
-          }}
         />
 
-        <div className="flex gap-2 items-center">
+        <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
           <input
+            style={{ ...inp, flex: 1, fontFamily: "monospace", fontSize: 13 }}
             type={showToken ? "text" : "password"}
             placeholder="GitHub Token (optional — for private repos)"
             value={token}
             onChange={e => setToken(e.target.value)}
-            className="flex-1 px-3 py-2 rounded-lg text-sm font-mono"
-            style={{
-              background: "var(--bg-secondary)",
-              border: "1px solid var(--border)",
-              color: "var(--text-primary)",
-            }}
           />
           <button
             onClick={() => setShowToken(s => !s)}
-            className="px-3 py-2 rounded-lg text-xs"
-            style={{ background: "var(--bg-secondary)", color: "var(--text-muted)" }}
+            style={{ padding: "11px 14px", borderRadius: 10, border: "1.5px solid #E5E7EB", background: "#FAFAF8", color: "#6B7280", fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}
           >
             {showToken ? "Hide" : "Show"}
           </button>
         </div>
-
-        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-          Public repos work without a token. For private repos, create a token with <code>repo</code> scope.
-        </p>
+        <p style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 18 }}>Public repos work without a token.</p>
 
         <button
           onClick={handleScan}
           disabled={!repoUrl.trim() || scanning}
-          className="w-full py-2.5 rounded-lg font-semibold text-sm text-white flex items-center justify-center gap-2"
           style={{
-            background: repoUrl.trim() && !scanning ? "var(--accent)" : "var(--text-muted)",
+            width: "100%", padding: "13px", borderRadius: 12,
+            background: repoUrl.trim() && !scanning ? "#4F46E5" : "#E5E7EB",
+            color: repoUrl.trim() && !scanning ? "#FFF" : "#9CA3AF",
+            fontSize: 14, fontWeight: 600, border: "none",
             cursor: repoUrl.trim() && !scanning ? "pointer" : "not-allowed",
-            opacity: repoUrl.trim() && !scanning ? 1 : 0.6,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
           }}
         >
-          {scanning ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Agents running...
-            </>
-          ) : (
-            <>
-              <Github className="w-4 h-4" />
-              Launch Agents
-            </>
-          )}
+          {scanning
+            ? <><span style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> Agents running…</>
+            : <><Github size={16} /> Launch Agents</>
+          }
         </button>
       </div>
 
-      {/* Agent Progress Cards */}
+      {/* Agent pipeline */}
       {(scanning || results) && (
-        <div className="space-y-2 mb-5">
-          {agentStages.map((agent) => {
-            const Icon = agent.icon;
-            const isDone = agent.status === "done";
-            const isRunning = agent.status === "running";
-            return (
-              <div
-                key={agent.id}
-                className="rounded-xl px-4 py-3 flex items-center gap-3 transition-all"
-                style={{
-                  background: "var(--bg-secondary)",
-                  border: `1px solid ${isDone ? agent.color + "50" : "var(--border)"}`,
-                  opacity: agent.status === "pending" ? 0.4 : 1,
-                }}
-              >
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: agent.color + "20" }}
-                >
-                  {isDone
-                    ? <Check className="w-4 h-4" style={{ color: agent.color }} />
-                    : <Icon className="w-4 h-4" style={{ color: agent.color }} />
-                  }
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{agent.name}</span>
-                    {isRunning && (
-                      <span className="text-xs" style={{ color: agent.color }}>
-                        {Math.round(agent.progress)}%
+        <div style={{ ...card, padding: 20 }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 14 }}>Agent Pipeline</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {agentStages.map(agent => {
+              const Icon = agent.icon;
+              const done = agent.status === "done";
+              const running = agent.status === "running";
+              return (
+                <div key={agent.id} style={{ display: "flex", alignItems: "center", gap: 12, opacity: agent.status === "pending" ? 0.35 : 1, transition: "opacity 0.3s" }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: agent.color + "15", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {done
+                      ? <Check size={14} color={agent.color} strokeWidth={2.5} />
+                      : <Icon size={14} color={agent.color} />
+                    }
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: running ? 4 : 0 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{agent.name}</span>
+                      <span style={{ fontSize: 11, color: done ? "#059669" : agent.color }}>
+                        {done ? "Done" : running ? `${Math.round(agent.progress)}%` : ""}
                       </span>
-                    )}
-                    {isDone && (
-                      <span className="text-xs" style={{ color: "#22c55e" }}>Done</span>
+                    </div>
+                    {!done && <p style={{ fontSize: 11, color: "#9CA3AF", margin: 0 }}>{agent.desc}</p>}
+                    {running && (
+                      <div style={{ height: 3, borderRadius: 99, background: "#F3F4F6", overflow: "hidden", marginTop: 6 }}>
+                        <div style={{ height: "100%", width: `${agent.progress}%`, background: agent.color, borderRadius: 99, transition: "width 0.2s" }} />
+                      </div>
                     )}
                   </div>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-                    {agent.desc}
-                  </p>
-                  {isRunning && (
-                    <div className="mt-1.5 h-1 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
-                      <div
-                        className="h-full rounded-full transition-all duration-200"
-                        style={{ width: `${agent.progress}%`, background: agent.color }}
-                      />
-                    </div>
-                  )}
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 
       {error && (
-        <div className="rounded-xl p-4 mb-5 text-sm" style={{ background: "#ef444415", border: "1px solid #ef444440", color: "#ef4444" }}>
+        <div style={{ padding: "14px 18px", borderRadius: 12, background: "#FEF2F2", border: "1px solid #FECACA", color: "#DC2626", fontSize: 13, marginBottom: 16 }}>
           {error}
         </div>
       )}
 
       {/* Results */}
       {results && (
-        <div className="space-y-4">
-          {/* Summary */}
-          <div className="glass p-5">
-            <div className="flex items-center justify-between mb-4">
+        <>
+          {/* Summary card */}
+          <div style={card}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
               <div>
-                <h3 className="font-bold">{results.repo}</h3>
-                <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-                  {results.files_scanned} files scanned · {results.raw_findings?.length || 0} violations found
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0 }}>{results.repo}</h3>
+                <p style={{ fontSize: 12, color: "#6B7280", marginTop: 3 }}>
+                  {results.files_scanned} files · {results.raw_findings?.length || 0} violations
+                  {results.scanners_used?.semgrep && " · Semgrep"}
+                  {results.scanners_used?.dep_findings > 0 && ` · ${results.scanners_used.dep_findings} CVEs`}
                 </p>
               </div>
               <a
                 href={`https://github.com/${results.repo}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg"
-                style={{ background: "var(--bg-hover)", color: "var(--text-secondary)" }}
+                style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#6B7280", textDecoration: "none", padding: "6px 12px", borderRadius: 8, border: "1px solid #E5E7EB", background: "#FAFAF8" }}
               >
-                <ExternalLink className="w-3 h-3" />
-                Open Repo
+                <ExternalLink size={12} /> View repo
               </a>
             </div>
 
-            {/* Severity badges */}
-            <div className="flex gap-3 flex-wrap">
-              {Object.entries(results.severity_counts || {}).map(([sev, count]) => (
-                count > 0 && (
-                  <div
-                    key={sev}
-                    className="px-3 py-1 rounded-full text-xs font-semibold"
-                    style={{ background: SEVERITY_COLOR[sev] + "20", color: SEVERITY_COLOR[sev] }}
-                  >
+            {/* Severity pills */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+              {Object.entries(results.severity_counts || {})
+                .filter(([, count]) => count > 0)
+                .map(([sev, count]) => (
+                  <span key={sev} style={{ padding: "4px 12px", borderRadius: 100, fontSize: 12, fontWeight: 600, background: (SEV[sev] || SEV.LOW).bg, color: (SEV[sev] || SEV.LOW).color }}>
                     {count} {sev}
-                  </div>
-                )
-              ))}
+                  </span>
+                ))
+              }
             </div>
+
+            {/* Triage quick view */}
+            {results.triage_counts && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 16 }}>
+                {[
+                  { key: "IMMEDIATE_ACTION", label: "Immediate", color: "#DC2626", bg: "#FEF2F2" },
+                  { key: "HIGH_PRIORITY",    label: "High",      color: "#D97706", bg: "#FFFBEB" },
+                  { key: "REVIEW_REQUIRED",  label: "Review",    color: "#CA8A04", bg: "#FEFCE8" },
+                  { key: "MONITOR",          label: "Monitor",   color: "#6B7280", bg: "#F9FAFB" },
+                ].map(t => (
+                  <div key={t.key} style={{ textAlign: "center", padding: "12px 8px", borderRadius: 10, background: t.bg }}>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: t.color }}>{results.triage_counts[t.key] || 0}</div>
+                    <div style={{ fontSize: 10, color: t.color, fontWeight: 600, marginTop: 2 }}>{t.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Policy status */}
             {results.policy_status && (
-              <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <span style={{ color: "var(--text-secondary)" }}>Security Documentation</span>
-                  <span style={{ color: results.policy_status.score >= 60 ? "#22c55e" : "#ef4444" }}>
-                    {results.policy_status.score}%
-                  </span>
+              <div style={{ paddingTop: 14, borderTop: "1px solid #F3F4F6" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 8 }}>
+                  <span style={{ color: "#6B7280", fontWeight: 500 }}>Security Docs</span>
+                  <span style={{ color: results.policy_status.score >= 60 ? "#059669" : "#DC2626", fontWeight: 600 }}>{results.policy_status.score}%</span>
                 </div>
-                <div className="flex gap-2 flex-wrap mt-1">
-                  {results.policy_status.present?.map(doc => (
-                    <span key={doc.path} className="text-xs px-2 py-0.5 rounded" style={{ background: "#22c55e20", color: "#22c55e" }}>
-                      ✓ {doc.name}
-                    </span>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {results.policy_status.present?.map(d => (
+                    <span key={d.path} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, background: "#F0FDF4", color: "#16A34A" }}>✓ {d.name}</span>
                   ))}
-                  {results.policy_status.missing?.slice(0, 3).map(doc => (
-                    <span key={doc.path} className="text-xs px-2 py-0.5 rounded" style={{ background: "#ef444420", color: "#ef4444" }}>
-                      ✗ {doc.name}
-                    </span>
+                  {results.policy_status.missing?.slice(0, 3).map(d => (
+                    <span key={d.path} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, background: "#FEF2F2", color: "#DC2626" }}>✗ {d.name}</span>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Trail detection */}
-            {results.trail_info && (
-              <div className="mt-3 pt-3 text-xs" style={{ borderTop: "1px solid var(--border)" }}>
-                <span className="font-medium" style={{ color: "var(--text-secondary)" }}>CloudTrail in Code: </span>
-                {results.trail_info.terraform_defined
-                  ? (results.trail_info.terraform_enabled
-                    ? <span style={{ color: "#22c55e" }}>✓ Terraform — CloudTrail enabled</span>
-                    : <span style={{ color: "#ef4444" }}>✗ Terraform — CloudTrail disabled</span>)
-                  : results.trail_info.cloudformation_defined
-                    ? <span style={{ color: "#22c55e" }}>✓ CloudFormation detected</span>
-                    : <span style={{ color: "var(--text-muted)" }}>No IaC detected in repo</span>
-                }
-              </div>
-            )}
-
-            {/* CTA to full dashboard */}
             <button
               onClick={() => onResults(results, {})}
-              className="mt-4 w-full py-2.5 rounded-xl font-semibold text-sm text-white flex items-center justify-center gap-2"
-              style={{ background: "var(--accent)" }}
+              style={{ width: "100%", marginTop: 16, padding: 13, borderRadius: 12, background: "#4F46E5", color: "#FFF", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
             >
-              <Zap className="w-4 h-4" />
-              View Full Analysis in Dashboard
+              <Zap size={15} /> Open Full Dashboard
             </button>
           </div>
 
-          {/* ── Metric Panels ── */}
-
-          {/* SOC 2 Category Metrics */}
-          {results.soc2_metrics && (
-            <div className="glass p-5">
-              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <Shield className="w-4 h-4" style={{ color: "#6366f1" }} />
-                SOC 2 Control Categories Affected
-              </h4>
-              <div className="space-y-2">
-                {Object.entries(results.soc2_metrics).map(([cat, data]) => (
-                  data.total > 0 && (
-                    <div key={cat}>
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span style={{ color: "var(--text-secondary)" }}>{cat}</span>
-                        <span style={{ color: data.affected > 0 ? "#ef4444" : "#22c55e" }}>
-                          {data.affected}/{data.total} controls affected
-                        </span>
-                      </div>
-                      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            width: `${data.pct}%`,
-                            background: data.pct >= 60 ? "#ef4444" : data.pct >= 30 ? "#f97316" : "#eab308",
-                          }}
-                        />
-                      </div>
-                      {data.controls.length > 0 && (
-                        <div className="flex gap-1 mt-1 flex-wrap">
-                          {data.controls.map(c => (
-                            <span key={c} className="text-xs px-1.5 py-0.5 rounded" style={{ background: "#ef444420", color: "#ef4444" }}>
-                              {c}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Cross-Framework Metrics */}
+          {/* Framework impact */}
           {results.framework_metrics && (
-            <div className="glass p-5">
-              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <Eye className="w-4 h-4" style={{ color: "#f97316" }} />
-                Cross-Framework Impact
-              </h4>
-              <div className="grid grid-cols-2 gap-3">
+            <div style={card}>
+              <p style={{ fontSize: 12, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 14 }}>Cross-Framework Impact</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
                 {[
-                  { key: "soc2", label: "SOC 2", color: "#6366f1" },
-                  { key: "iso27001", label: "ISO 27001", color: "#22c55e" },
-                  { key: "hipaa", label: "HIPAA", color: "#f97316" },
-                  { key: "dpdp", label: "DPDP 2023", color: "#ec4899" },
+                  { key: "soc2",     label: "SOC 2",    color: "#4F46E5" },
+                  { key: "iso27001", label: "ISO 27001", color: "#059669" },
+                  { key: "hipaa",    label: "HIPAA",     color: "#D97706" },
+                  { key: "dpdp",     label: "DPDP 2023", color: "#DB2777" },
                 ].map(fw => (
-                  <div
-                    key={fw.key}
-                    className="p-3 rounded-xl text-center"
-                    style={{ background: fw.color + "15", border: `1px solid ${fw.color}30` }}
-                  >
-                    <div className="text-2xl font-bold" style={{ color: fw.color }}>
-                      {results.framework_metrics[fw.key] || 0}
+                  <div key={fw.key} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 12, background: fw.color + "08", border: `1.5px solid ${fw.color}25` }}>
+                    <span style={{ fontSize: 24, fontWeight: 700, color: fw.color }}>{results.framework_metrics[fw.key] || 0}</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{fw.label}</div>
+                      <div style={{ fontSize: 11, color: "#9CA3AF" }}>violations</div>
                     </div>
-                    <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-                      {fw.label}
-                    </div>
-                    <div className="text-xs" style={{ color: "var(--text-muted)" }}>violations</div>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Triage Summary (rule-based, no AI) */}
-          {results.triage_counts && (
-            <div className="glass p-5">
-              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4" style={{ color: "#eab308" }} />
-                Adversary Agent Triage
-                <span className="text-xs font-normal ml-auto" style={{ color: "var(--text-muted)" }}>
-                  rule-based · no AI cost
-                </span>
-              </h4>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { key: "IMMEDIATE_ACTION", label: "Immediate Action", color: "#ef4444" },
-                  { key: "HIGH_PRIORITY", label: "High Priority", color: "#f97316" },
-                  { key: "REVIEW_REQUIRED", label: "Review Required", color: "#eab308" },
-                  { key: "MONITOR", label: "Monitor", color: "#6b7280" },
-                ].map(t => (
-                  <div
-                    key={t.key}
-                    className="p-2.5 rounded-lg flex items-center justify-between"
-                    style={{ background: t.color + "15" }}
-                  >
-                    <span className="text-xs font-medium" style={{ color: t.color }}>{t.label}</span>
-                    <span className="text-lg font-bold" style={{ color: t.color }}>
-                      {results.triage_counts[t.key] || 0}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Audit Questions */}
+          {/* Audit questions */}
           {results.audit_questions_by_control && Object.keys(results.audit_questions_by_control).length > 0 && (
-            <div className="glass p-5">
-              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <FileText className="w-4 h-4" style={{ color: "#22c55e" }} />
-                Audit Questions Your Auditor Will Ask
-                <span className="text-xs font-normal ml-auto px-2 py-0.5 rounded" style={{ background: "#22c55e20", color: "#22c55e" }}>
-                  {results.total_audit_questions} total
+            <div style={card}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.05em", textTransform: "uppercase", margin: 0 }}>What Your Auditor Will Ask</p>
+                <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 100, background: "#F0FDF4", color: "#059669", fontWeight: 600 }}>
+                  {results.total_audit_questions} questions
                 </span>
-              </h4>
-              <div className="space-y-3">
-                {Object.entries(results.audit_questions_by_control).slice(0, 5).map(([ctrl, qs]) => (
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {Object.entries(results.audit_questions_by_control).slice(0, 4).map(([ctrl, qs]) => (
                   <div key={ctrl}>
-                    <div className="text-xs font-semibold mb-1" style={{ color: "var(--accent)" }}>{ctrl}</div>
-                    <div className="space-y-1">
-                      {(qs || []).slice(0, 3).map((q, i) => (
-                        <div key={i} className="text-xs flex gap-2" style={{ color: "var(--text-secondary)" }}>
-                          <span className="flex-shrink-0" style={{ color: "var(--text-muted)" }}>Q{i + 1}.</span>
-                          {q}
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#4F46E5", background: "#EEF2FF", padding: "2px 8px", borderRadius: 5 }}>{ctrl}</span>
+                    <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 5 }}>
+                      {(qs || []).slice(0, 2).map((q, i) => (
+                        <div key={i} style={{ fontSize: 12, color: "#374151", display: "flex", gap: 8 }}>
+                          <span style={{ color: "#9CA3AF", flexShrink: 0 }}>Q{i + 1}.</span> {q}
                         </div>
                       ))}
                     </div>
                   </div>
                 ))}
-                {Object.keys(results.audit_questions_by_control).length > 5 && (
-                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    + {Object.keys(results.audit_questions_by_control).length - 5} more controls with questions
-                  </p>
-                )}
               </div>
             </div>
           )}
 
           {/* Findings by file */}
           <div>
-            <h4 className="text-sm font-semibold mb-2" style={{ color: "var(--text-secondary)" }}>
-              Violations by File
-            </h4>
-            {Object.keys(findingsByFile).length === 0 ? (
-              <div className="glass p-6 text-center">
-                <Check className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                <p className="text-sm font-medium">No violations found</p>
-                <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                  All scanned patterns passed
-                </p>
+            <p style={{ fontSize: 12, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 12 }}>Violations by File</p>
+
+            {Object.keys(byFile).length === 0 ? (
+              <div style={{ ...card, textAlign: "center", padding: 36 }}>
+                <Check size={32} color="#059669" style={{ margin: "0 auto 10px" }} />
+                <p style={{ fontWeight: 600, color: "#111827" }}>No violations found</p>
+                <p style={{ fontSize: 13, color: "#9CA3AF", marginTop: 4 }}>All patterns passed</p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {Object.entries(findingsByFile).map(([file, filefindings]) => {
-                  const isOpen = expandedFiles[file];
-                  const worstSev = filefindings.reduce((worst, f) => {
-                    const order = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
-                    return (order[f.severity] || 0) > (order[worst] || 0) ? f.severity : worst;
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {Object.entries(byFile).map(([file, ffindings]) => {
+                  const isOpen = expanded[file];
+                  const worst = ffindings.reduce((w, f) => {
+                    const o = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+                    return (o[f.severity] || 0) > (o[w] || 0) ? f.severity : w;
                   }, "LOW");
+                  const hasCVE = ffindings.some(f => f.source === "osv");
 
                   return (
-                    <div
-                      key={file}
-                      className="rounded-xl overflow-hidden"
-                      style={{ border: "1px solid var(--border)" }}
-                    >
+                    <div key={file} style={{ borderRadius: 14, overflow: "hidden", border: "1.5px solid #F3F4F6", background: "#FFFFFF" }}>
                       <button
-                        className="w-full flex items-center justify-between px-4 py-3 text-left"
-                        style={{ background: "var(--bg-secondary)" }}
-                        onClick={() => setExpandedFiles(prev => ({ ...prev, [file]: !isOpen }))}
+                        style={{ width: "100%", padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
+                        onClick={() => setExpanded(p => ({ ...p, [file]: !isOpen }))}
                       >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Code className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--text-muted)" }} />
-                          <span className="text-xs font-mono truncate">{file}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+                          {hasCVE ? <Package size={13} color="#9CA3AF" style={{ flexShrink: 0 }} /> : <Code size={13} color="#9CA3AF" style={{ flexShrink: 0 }} />}
+                          <span style={{ fontSize: 12, fontFamily: "monospace", color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file}</span>
                         </div>
-                        <div className="flex items-center gap-2 ml-2">
-                          <span
-                            className="text-xs px-2 py-0.5 rounded font-semibold flex-shrink-0"
-                            style={{ background: SEVERITY_COLOR[worstSev] + "20", color: SEVERITY_COLOR[worstSev] }}
-                          >
-                            {filefindings.length} {filefindings.length === 1 ? "issue" : "issues"}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: 8 }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 100, background: (SEV[worst] || SEV.LOW).bg, color: (SEV[worst] || SEV.LOW).color }}>
+                            {ffindings.length} {ffindings.length === 1 ? "issue" : "issues"}
                           </span>
-                          {isOpen ? <ChevronDown className="w-3.5 h-3.5" style={{ color: "var(--text-muted)" }} /> : <ChevronRight className="w-3.5 h-3.5" style={{ color: "var(--text-muted)" }} />}
+                          {isOpen ? <ChevronDown size={14} color="#9CA3AF" /> : <ChevronRight size={14} color="#9CA3AF" />}
                         </div>
                       </button>
 
                       {isOpen && (
-                        <div className="divide-y" style={{ borderTop: "1px solid var(--border)" }}>
-                          {filefindings.map((finding, idx) => {
-                            const verdict = finding.audit_verdict || "CONFIRMED";
-                            const vConfig = VERDICT_CONFIG[verdict] || VERDICT_CONFIG.CONFIRMED;
-
+                        <div style={{ borderTop: "1px solid #F3F4F6" }}>
+                          {ffindings.map((finding, idx) => {
+                            const vc = VERDICT[finding.audit_verdict] || VERDICT.CONFIRMED;
                             return (
-                              <div key={idx} className="px-4 py-3" style={{ background: "var(--bg-card)" }}>
-                                <div className="flex items-start justify-between gap-2 mb-1.5">
-                                  <div className="flex items-center gap-1.5">
-                                    <span
-                                      className="text-xs font-bold px-1.5 py-0.5 rounded"
-                                      style={{ background: SEVERITY_COLOR[finding.severity] + "20", color: SEVERITY_COLOR[finding.severity] }}
-                                    >
-                                      {finding.severity}
-                                    </span>
-                                    <span className="text-sm font-medium">{finding.name}</span>
+                              <div key={idx} style={{ padding: "16px 18px", borderBottom: idx < ffindings.length - 1 ? "1px solid #F9FAFB" : "none", background: "#FAFAF8" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 8 }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                                    <SevBadge sev={finding.severity} />
+                                    <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{finding.name}</span>
                                   </div>
-                                  <span
-                                    className="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
-                                    style={{ background: vConfig.bg, color: vConfig.color }}
-                                  >
-                                    {vConfig.label}
+                                  <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 100, background: vc.bg, color: vc.color, whiteSpace: "nowrap", fontWeight: 500 }}>
+                                    {vc.label}
                                   </span>
                                 </div>
 
                                 {finding.line > 0 && (
-                                  <div
-                                    className="text-xs font-mono px-2 py-1 rounded mb-1.5 truncate"
-                                    style={{ background: "var(--bg-hover)", color: "var(--text-secondary)" }}
-                                  >
+                                  <div style={{ fontFamily: "monospace", fontSize: 11, padding: "6px 10px", borderRadius: 7, background: "#F3F4F6", color: "#374151", marginBottom: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                     Line {finding.line}: {finding.line_content}
                                   </div>
                                 )}
 
-                                <p className="text-xs mb-1" style={{ color: "var(--text-secondary)" }}>
-                                  {finding.message}
-                                </p>
+                                <p style={{ fontSize: 12, color: "#6B7280", marginBottom: 6 }}>{finding.message}</p>
 
                                 {finding.auditor_challenge && (
-                                  <p className="text-xs italic" style={{ color: "#f97316" }}>
+                                  <p style={{ fontSize: 12, color: "#D97706", fontStyle: "italic", marginBottom: 6 }}>
                                     Auditor: "{finding.auditor_challenge}"
                                   </p>
                                 )}
 
-                                <div className="mt-1.5 flex flex-wrap gap-1">
+                                {finding.fix && (
+                                  <p style={{ fontSize: 11, color: "#059669", background: "#F0FDF4", padding: "6px 10px", borderRadius: 7 }}>
+                                    Fix: {finding.fix}
+                                  </p>
+                                )}
+
+                                <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
                                   {finding.controls?.map(c => (
-                                    <span key={c} className="text-xs px-1.5 py-0.5 rounded" style={{ background: "var(--bg-hover)", color: "var(--text-muted)" }}>
-                                      {c}
-                                    </span>
-                                  ))}
-                                  {finding.frameworks?.map(fw => (
-                                    <span key={fw} className="text-xs px-1.5 py-0.5 rounded" style={{ background: "var(--accent)20", color: "var(--accent)" }}>
-                                      {fw.toUpperCase()}
-                                    </span>
+                                    <span key={c} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 5, background: "#EEF2FF", color: "#4F46E5", fontWeight: 600 }}>{c}</span>
                                   ))}
                                 </div>
                               </div>
@@ -614,7 +425,7 @@ export default function GitHubAgent({ onResults, selectedFrameworks, loading, se
               </div>
             )}
           </div>
-        </div>
+        </>
       )}
     </div>
   );
