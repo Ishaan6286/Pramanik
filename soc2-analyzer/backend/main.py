@@ -723,6 +723,29 @@ async def github_webhook(request: Request):
         except Exception as e:
             print(f"Failed to save GitHub scan to DB: {e}")
 
+        # ── Auto-fix: create PRs for CRITICAL findings ──
+        auto_fix_prs = []
+        if token and critical_count > 0:
+            critical_findings = [
+                f for f in challenged
+                if f.get("severity") == "CRITICAL"
+                and f.get("file")
+                and f.get("pattern_id") != "POLICY-MISSING"
+            ][:3]  # Max 3 auto-fix PRs per push to avoid spam
+
+            for finding in critical_findings:
+                try:
+                    pr_result = autofix.auto_fix(
+                        repo_url=repo_url,
+                        token=token,
+                        file_path=finding["file"],
+                        finding=finding,
+                    )
+                    auto_fix_prs.append(pr_result)
+                    print(f"[Webhook] Auto-fix PR created: {pr_result.get('pr_url', '')}")
+                except Exception as e:
+                    print(f"[Webhook] Auto-fix failed for {finding.get('file')}: {e}")
+
         # Build summary
         files_scanned = scan_result.get("files_scanned", 0)
         summary_lines = [
@@ -749,6 +772,7 @@ async def github_webhook(request: Request):
             "build_passed": critical_count == 0,
             "summary": "\n".join(summary_lines),
             "agent_trace": final_state.get("agent_trace", []),
+            "auto_fix_prs": auto_fix_prs,
             "top_findings": [
                 {
                     "file": f.get("file"),
