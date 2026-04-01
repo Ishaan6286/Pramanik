@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Shield, Upload, FileCheck, LogOut, Check, Cloud, Key, Github, Zap } from "lucide-react";
+import { Upload, FileCheck, LogOut, Check, Cloud, Key, Github, Zap } from "lucide-react";
 import GitHubAgent from "./GitHubAgent";
 
 const FRAMEWORKS = [
@@ -21,7 +21,7 @@ const AWS_REGIONS = [
 const s = {
   page:    { minHeight: "100vh", background: "#F8F7F4", display: "flex", flexDirection: "column", fontFamily: "'Inter', system-ui, sans-serif" },
   nav:     { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 32px", background: "#FFFFFF", borderBottom: "1px solid #EFEFED" },
-  logo:    { display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: 16, color: "#111827" },
+  logo:    { display: "flex", alignItems: "center" },
   navR:    { display: "flex", alignItems: "center", gap: 12 },
   userTxt: { fontSize: 13, color: "#6B7280" },
   logoutBtn: { padding: "6px 12px", borderRadius: 8, border: "1px solid #E5E7EB", background: "#FFF", cursor: "pointer", fontSize: 12, color: "#6B7280", display: "flex", alignItems: "center", gap: 4 },
@@ -169,8 +169,7 @@ export default function UploadPage({ onAnalysis, loading, setLoading, user, onLo
       {/* Nav */}
       <nav style={s.nav}>
         <div style={s.logo}>
-          <Shield size={20} color="#4F46E5" />
-          ComplianceAI
+          <img src="/logo.png" alt="ComplianceAI" style={{ height: 64, width: "auto", objectFit: "contain" }} />
         </div>
         <div style={s.navR}>
           <span style={s.userTxt}>{user}</span>
