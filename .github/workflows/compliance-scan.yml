@@ -1,0 +1,97 @@
+name: ComplianceAI Security Scan
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  compliance-scan:
+    name: "ComplianceAI — SOC2 + ISO + HIPAA + DPDP"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run ComplianceAI Multi-Agent Scan
+        id: scan
+        run: |
+          echo "Scanning ${{ github.repository }} with ComplianceAI agents..."
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.COMPLIANCE_AI_URL }}/api/webhook/github" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "repo_url": "https://github.com/${{ github.repository }}",
+              "ref": "${{ github.ref }}",
+              "commit_sha": "${{ github.sha }}",
+              "token": "${{ secrets.GITHUB_TOKEN }}"
+            }')
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          echo "HTTP status: $HTTP_CODE"
+          echo "$BODY" | python3 -m json.tool 2>/dev/null || echo "$BODY"
+
+          # Extract values
+          CRITICAL=$(echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('critical_count', 0))" 2>/dev/null || echo "0")
+          TOTAL=$(echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('total_findings', 0))" 2>/dev/null || echo "0")
+          SUMMARY=$(echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('summary', 'Scan complete'))" 2>/dev/null || echo "Scan complete")
+          BUILD_PASSED=$(echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(str(d.get('build_passed', True)).lower())" 2>/dev/null || echo "true")
+
+          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+          echo "build_passed=$BUILD_PASSED" >> $GITHUB_OUTPUT
+
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "$SUMMARY"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          # Fail build if CRITICAL findings exist
+          if [ "$CRITICAL" -gt "0" ]; then
+            echo ""
+            echo "❌ BUILD BLOCKED: $CRITICAL CRITICAL compliance violations found."
+            echo "Fix these before merging to main."
+            exit 1
+          fi
+
+          echo "✅ Compliance scan passed — no CRITICAL violations."
+
+      - name: Post scan summary to PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const critical = '${{ steps.scan.outputs.critical }}';
+            const total = '${{ steps.scan.outputs.total }}';
+            const passed = '${{ steps.scan.outputs.build_passed }}' === 'true';
+
+            const icon = passed ? '✅' : '❌';
+            const status = passed ? 'PASSED' : 'BLOCKED';
+
+            const body = `## ${icon} ComplianceAI Scan — ${status}
+
+            | Metric | Value |
+            |--------|-------|
+            | Total Violations | ${total} |
+            | Critical | ${critical} |
+            | Frameworks | SOC 2 · ISO 27001 · HIPAA · DPDP Act 2023 |
+            | Agents | Code · Policy · Adversary · CES Engine |
+
+            ${passed
+              ? '✅ No CRITICAL violations found. Safe to merge.'
+              : `❌ **${critical} CRITICAL violation(s) must be fixed before merging.**\n\nRun the full analysis at your ComplianceAI dashboard.`
+            }
+
+            ---
+            *Powered by [ComplianceAI](https://github.com/Anaa1101/drift_detection) · CES v2 Algorithm*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });

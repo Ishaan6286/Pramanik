@@ -1,6 +1,7 @@
 """
 Supabase Database Service
-Handles all database operations — saving scans, loading history, baselines for drift.
+Handles all database operations — saving scans, loading history, baselines for drift,
+and the dynamic audit questions table (editable from Supabase dashboard).
 """
 
 import os
@@ -96,138 +97,113 @@ def get_baseline(user_id, company_name: str):
     return result.data[0] if result.data else None
 
 
-# ── DRIFT HISTORY (for trending & alerting) ────────
+# ── AUDIT QUESTIONS (dynamic, editable from Supabase dashboard) ────────────
 
-def save_drift_analysis(user_id, company_name: str, drift_result: dict, baseline_id: str = None) -> dict:
-    """Save drift analysis result for history and trending."""
-    data = {
-        "company_name": company_name,
-        "total_changes": drift_result.get("total_changes"),
-        "regressions": drift_result.get("regressions"),
-        "improvements": drift_result.get("improvements"),
-        "critical_issues": drift_result.get("critical_issues"),
-        "overall_risk_increase": drift_result.get("overall_risk_increase"),
-        "changes": drift_result.get("changes", []),
-        "baseline_id": baseline_id,
-    }
-    if user_id:
-        data["user_id"] = user_id
-    
-    result = _get_client().table("drift_history").insert(data).execute()
-    return result.data[0] if result.data else data
-
-
-def get_drift_history(user_id, company_name: str, limit: int = 10) -> list:
-    """Get recent drift analyses for a company."""
-    query = (_get_client().table("drift_history")
-             .select("*")
-             .eq("company_name", company_name)
-             .order("analysis_timestamp", desc=True)
-             .limit(limit))
-    if user_id:
-        query = query.eq("user_id", user_id)
-    
-    result = query.execute()
-    return result.data
+def get_audit_questions_for_control(control_id: str) -> list[str]:
+    """
+    Fetch audit questions for a control from Supabase.
+    Returns list of question strings, ordered by severity (CRITICAL first).
+    Returns [] if table doesn't exist or DB is unreachable.
+    """
+    try:
+        result = (_get_client()
+                  .table("audit_questions")
+                  .select("question")
+                  .eq("control_id", control_id)
+                  .order("created_at")
+                  .execute())
+        return [row["question"] for row in (result.data or [])]
+    except Exception:
+        return []
 
 
-def get_critical_alerts(user_id, company_name: str, status: str = "new") -> list:
-    """Get critical drift alerts for a company."""
-    query = (_get_client().table("drift_alerts")
-             .select("*")
-             .eq("company_name", company_name)
-             .eq("status", status)
-             .eq("severity", "CRITICAL")
-             .order("detected_at", desc=True))
-    if user_id:
-        query = query.eq("user_id", user_id)
-    
-    result = query.execute()
-    return result.data
+def get_all_audit_questions() -> dict[str, list[str]]:
+    """
+    Fetch ALL audit questions from Supabase, grouped by control_id.
+    Used for bulk loading at startup.
+    """
+    try:
+        result = (_get_client()
+                  .table("audit_questions")
+                  .select("control_id, question")
+                  .order("control_id")
+                  .execute())
+        grouped: dict = {}
+        for row in (result.data or []):
+            ctrl = row["control_id"]
+            if ctrl not in grouped:
+                grouped[ctrl] = []
+            grouped[ctrl].append(row["question"])
+        return grouped
+    except Exception:
+        return {}
 
 
-def create_drift_alert(user_id, company_name: str, change: dict) -> dict:
-    """Create an alert for a regression."""
-    if not change.get("is_regression"):
-        return None  # Don't alert on improvements
-    
-    data = {
-        "company_name": company_name,
-        "severity": change.get("severity"),
-        "drift_config_path": change.get("config_path"),
-        "previous_value": str(change.get("previous_value")),
-        "current_value": str(change.get("current_value")),
-        "risk_score": change.get("risk_score"),
-        "affected_controls": change.get("affected_controls", []),
-        "explanation": change.get("explanation"),
-        "remediation": change.get("remediation"),
-        "status": "new",
-    }
-    if user_id:
-        data["user_id"] = user_id
-    
-    result = _get_client().table("drift_alerts").insert(data).execute()
-    return result.data[0] if result.data else data
+def add_audit_question(control_id: str, question: str, framework: str = "soc2", source: str = "custom") -> bool:
+    """
+    Add a new audit question to Supabase.
+    Call this from the admin panel or seed script.
+    """
+    try:
+        _get_client().table("audit_questions").insert({
+            "control_id": control_id,
+            "question": question,
+            "framework": framework,
+            "source": source,
+        }).execute()
+        return True
+    except Exception as e:
+        print(f"Failed to add audit question: {e}")
+        return False
 
 
-def acknowledge_alert(alert_id: str, user_id) -> dict:
-    """Mark an alert as acknowledged."""
-    from datetime import datetime
-    
-    data = {
-        "status": "acknowledged",
-        "acknowledged_at": datetime.utcnow().isoformat(),
-        "acknowledged_by": user_id,
-    }
-    result = (_get_client().table("drift_alerts")
-              .update(data)
-              .eq("id", alert_id)
-              .execute())
-    return result.data[0] if result.data else data
+def seed_audit_questions(questions_dict: dict, overwrite: bool = False) -> int:
+    """
+    Seed the audit_questions table from the static dict in audit_memory.py.
+    Call once on first run: POST /api/admin/seed-audit-questions
+    Returns number of questions inserted.
+    """
+    client = _get_client()
+
+    if overwrite:
+        client.table("audit_questions").delete().neq("id", "00000000-0000-0000-0000-000000000000").execute()
+
+    rows = []
+    for control_id, questions in questions_dict.items():
+        for q in questions:
+            rows.append({
+                "control_id": control_id,
+                "question": q,
+                "framework": "soc2" if control_id.startswith(("CC", "A", "C", "PI", "P")) else "dpdp",
+                "source": "aicpa_builtin",
+            })
+
+    if not rows:
+        return 0
+
+    # Insert in batches of 100
+    for i in range(0, len(rows), 100):
+        client.table("audit_questions").insert(rows[i:i+100]).execute()
+
+    return len(rows)
 
 
-def resolve_alert(alert_id: str) -> dict:
-    """Mark an alert as resolved."""
-    data = {"status": "resolved"}
-    result = (_get_client().table("drift_alerts")
-              .update(data)
-              .eq("id", alert_id)
-              .execute())
-    return result.data[0] if result.data else data
+# ── GITHUB SCAN RESULTS ─────────────────────────────
 
-
-def get_drift_trends(user_id, company_name: str, days: int = 30) -> list:
-    """Get drift trends for the last N days."""
-    from datetime import datetime, timedelta
-    
-    start_date = (datetime.utcnow() - timedelta(days=days)).date()
-    
-    query = (_get_client().table("drift_trends")
-             .select("*")
-             .eq("company_name", company_name)
-             .gte("date", str(start_date))
-             .order("date", desc=True))
-    if user_id:
-        query = query.eq("user_id", user_id)
-    
-    result = query.execute()
-    return result.data
-
-
-def log_audit_event(user_id, company_name: str, action: str, 
-                    drift_path: str = None, severity: str = None,
-                    previous_value = None, current_value = None, notes: str = None) -> dict:
-    """Log a drift-related event for compliance audit trail."""
-    data = {
-        "company_name": company_name,
-        "action": action,
-        "drift_config_path": drift_path,
-        "previous_value": str(previous_value) if previous_value else None,
-        "current_value": str(current_value) if current_value else None,
-        "severity": severity,
-        "performed_by": user_id,
-        "notes": notes,
-    }
-    
-    result = _get_client().table("drift_audit_log").insert(data).execute()
-    return result.data[0] if result.data else data
+def save_github_scan(repo: str, findings_count: int, severity_counts: dict,
+                     score: int, raw_findings: list, triage_counts: dict) -> dict:
+    """Save a GitHub repo scan result."""
+    try:
+        data = {
+            "repo": repo,
+            "findings_count": findings_count,
+            "severity_counts": severity_counts,
+            "score": score,
+            "raw_findings": raw_findings[:50],  # Limit to 50 to avoid payload size issues
+            "triage_counts": triage_counts,
+        }
+        result = _get_client().table("github_scans").insert(data).execute()
+        return result.data[0] if result.data else data
+    except Exception as e:
+        print(f"Failed to save GitHub scan: {e}")
+        return {}

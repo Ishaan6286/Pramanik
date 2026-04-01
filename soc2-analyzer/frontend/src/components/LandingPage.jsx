@@ -1,4 +1,4 @@
-import { Shield, Zap, FileText, Lock, ArrowRight, CheckCircle } from "lucide-react";
+import { Zap, FileText, Lock, ArrowRight, CheckCircle, MessageCircle } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 
 const features = [
@@ -28,17 +28,26 @@ const checks = [
   "PDF compliance report export"
 ];
 
-export default function LandingPage({ onGetStarted }) {
+export default function LandingPage({ onGetStarted, onChat }) {
   return (
     <div className="min-h-screen" style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}>
       {/* Nav */}
       <nav className="flex items-center justify-between px-8 py-5 max-w-6xl mx-auto">
-        <div className="flex items-center gap-2">
-          <Shield className="w-7 h-7" style={{ color: "var(--accent)" }} />
-          <span className="text-xl font-bold">SOC2 Analyzer</span>
+        <div className="flex items-center">
+          <img src="/logo.png" alt="ComplianceAI" style={{ height: 64, width: "auto", objectFit: "contain" }} />
         </div>
         <div className="flex items-center gap-4">
           <ThemeToggle />
+          {onChat && (
+            <button
+              onClick={onChat}
+              className="px-4 py-2 rounded-lg font-medium flex items-center gap-2"
+              style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)" }}
+            >
+              <MessageCircle className="w-4 h-4" />
+              Chat
+            </button>
+          )}
           <button
             onClick={onGetStarted}
             className="px-5 py-2 rounded-lg font-medium text-white"

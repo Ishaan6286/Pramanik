@@ -49,7 +49,7 @@ Return ONLY the JSON array, no other text."""
     )
     text = response.choices[0].message.content
     clean = text.replace("```json", "").replace("```", "").strip()
-    return json.loads(clean)
+    return json.loads(clean, strict=False)
 
 
 def generate_audit_questions(failed_controls: list, company_name: str) -> dict:
@@ -103,7 +103,7 @@ Return ONLY the JSON, no other text."""
     )
     text = response.choices[0].message.content
     clean = text.replace("```json", "").replace("```", "").strip()
-    return json.loads(clean)
+    return json.loads(clean, strict=False)
 
 
 def generate_policies(company_name: str) -> dict:
@@ -149,4 +149,4 @@ Return ONLY the JSON, no other text."""
     )
     text = response.choices[0].message.content
     clean = text.replace("```json", "").replace("```", "").strip()
-    return json.loads(clean)
+    return json.loads(clean, strict=False)
