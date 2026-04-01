@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { HelpCircle, Loader2, ChevronDown, ChevronUp, CheckCircle, AlertTriangle, Eye, EyeOff, FileText } from "lucide-react";
+import { API_URL } from "../config";
 
 export default function AuditPrep({ companyName, failedControls }) {
   const [data, setData] = useState(null);
@@ -13,7 +14,7 @@ export default function AuditPrep({ companyName, failedControls }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("http://localhost:3001/api/audit-prep", {
+      const response = await fetch(`${API_URL}/api/audit-prep`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

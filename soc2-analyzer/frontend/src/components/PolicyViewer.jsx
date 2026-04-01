@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_URL } from "../config";
 import { FileText, Loader2 } from "lucide-react";
 
 export default function PolicyViewer({ companyName, config }) {
@@ -11,7 +12,7 @@ export default function PolicyViewer({ companyName, config }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:3001/api/policies', {
+      const response = await fetch(`${API_URL}/api/policies`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ company_name: companyName, aws_config: config })

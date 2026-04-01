@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_URL } from "../config";
 import { Upload, FileCheck, LogOut, Check, Cloud, Key, Github, Zap } from "lucide-react";
 import GitHubAgent from "./GitHubAgent";
 
@@ -141,7 +142,7 @@ export default function UploadPage({ onAnalysis, loading, setLoading, user, onLo
       const configJson = JSON.parse(configText);
       const formData = new FormData();
       formData.append("config", file);
-      const resp = await fetch("http://localhost:3001/api/analyze", { method: "POST", body: formData });
+      const resp = await fetch(`${API_URL}/api/analyze`, { method: "POST", body: formData });
       if (!resp.ok) throw new Error("Analysis failed");
       onAnalysis(filterFrameworks(await resp.json()), configJson);
     } catch (e) { setError("Failed: " + e.message); }
@@ -152,7 +153,7 @@ export default function UploadPage({ onAnalysis, loading, setLoading, user, onLo
     if (!awsCreds.access_key || !awsCreds.secret_key) { setError("Enter both Access Key and Secret Key"); return; }
     setLoading(true); setError(null);
     try {
-      const resp = await fetch("http://localhost:3001/api/scan-aws", {
+      const resp = await fetch(`${API_URL}/api/scan-aws`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...awsCreds, industry: "saas_startup" }),
       });
