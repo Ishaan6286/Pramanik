@@ -1,3 +1,4 @@
+import os
 import json
 from typing import Optional, List
 from dotenv import load_dotenv
@@ -21,19 +22,36 @@ import github_agent
 import adversary_agent
 import audit_memory
 import agent_graph
+import autofix
 
-# AI services — Bedrock primary, Groq fallback
+# AI services — auto-switches between Groq and Bedrock via AI_PROVIDER env var
 import groq_service
+from ai_provider import ai as ai_service
 import db
 
 app = FastAPI(title="ComplianceAI API")
 
+# CORS — restricted in production via env var, open in dev
+_cors_env = os.getenv("CORS_ORIGINS", "")
+_cors_origins = _cors_env.split(",") if _cors_env else ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/api/health")
+async def health():
+    """Health check — shows AI provider, version, and status."""
+    return {
+        "status": "ok",
+        "ai_provider": ai_service.name,
+        "ai_model": ai_service.model,
+        "version": "2.0.0",
+        "features": ["langgraph", "auto-fix-pr", "adversary-agent", "ces-engine"],
+    }
 
 
 @app.post("/api/analyze")
@@ -52,10 +70,10 @@ async def analyze(config: UploadFile = File(...)):
     explanations = []
     if failed:
         try:
-            explanations = groq_service.generate_explanations(failed, company_name)
-            print("AI explanations: used Groq")
+            explanations = ai_service.generate_explanations(failed, company_name)
+            print(f"AI explanations: used {ai_service.name}")
         except Exception as e:
-            print(f"Groq explanations failed: {e}")
+            print(f"AI explanations failed: {e}")
 
     enriched = []
     for control in result["results"]:
@@ -146,10 +164,10 @@ async def scan_aws(req: AWSScanRequest):
         explanations = []
         if failed:
             try:
-                explanations = groq_service.generate_explanations(failed, company_name)
-                print("AI explanations: used Groq")
+                explanations = ai_service.generate_explanations(failed, company_name)
+                print(f"AI explanations: used {ai_service.name}")
             except Exception as e:
-                print(f"Groq failed: {e}")
+                print(f"AI failed: {e}")
 
         enriched = []
         for control in result["results"]:
@@ -205,10 +223,10 @@ class PolicyRequest(BaseModel):
 @app.post("/api/policies")
 async def policies(req: PolicyRequest):
     try:
-        result = groq_service.generate_policies(req.company_name)
+        result = ai_service.generate_policies(req.company_name)
         return result
     except Exception as e:
-        print(f"Groq policies failed: {e}")
+        print(f"AI policies failed: {e}")
         raise HTTPException(status_code=500, detail=f"Policy generation failed: {str(e)}")
 
 
@@ -220,10 +238,10 @@ class AuditPrepRequest(BaseModel):
 @app.post("/api/audit-prep")
 async def audit_prep(req: AuditPrepRequest):
     try:
-        result = groq_service.generate_audit_questions(req.failed_controls, req.company_name)
+        result = ai_service.generate_audit_questions(req.failed_controls, req.company_name)
         return result
     except Exception as e:
-        print(f"Groq audit-prep failed: {e}")
+        print(f"AI audit-prep failed: {e}")
         raise HTTPException(status_code=500, detail=f"Audit prep failed: {str(e)}")
 
 
@@ -384,21 +402,18 @@ async def pramanik_chat(
         return result
     except Exception as e:
         print(f"Deepseek chat failed: {e}")
-        # Fallback to Groq for chat
+        # Fallback to AI provider for chat
         try:
-            response = groq_service._get_client().chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[
-                    {"role": "system", "content": "You are a SOC 2 compliance expert. Answer questions about compliance frameworks, security controls, and audit preparation."},
-                    {"role": "user", "content": message},
-                ],
+            response_text = ai_service.call_llm(
+                prompt=message,
+                system="You are a SOC 2 compliance expert. Answer questions about compliance frameworks, security controls, and audit preparation.",
                 temperature=0.3,
                 max_tokens=1000,
             )
             return {
-                "response": response.choices[0].message.content,
-                "sources": ["Groq LLaMA 3.3 70B (fallback)"],
-                "model": "groq-fallback",
+                "response": response_text,
+                "sources": [f"{ai_service.name} {ai_service.model} (fallback)"],
+                "model": f"{ai_service.name}-fallback",
             }
         except Exception as e2:
             raise HTTPException(status_code=500, detail=f"Chat failed: {str(e2)}")
@@ -543,6 +558,41 @@ async def scan_github(req: GitHubScanRequest):
 
 
 # ══════════════════════════════════════════════════
+# AUTO-FIX PR GENERATOR
+# ══════════════════════════════════════════════════
+
+class AutoFixRequest(BaseModel):
+    repo_url: str
+    token: str
+    file_path: str
+    finding: dict
+
+
+@app.post("/api/auto-fix")
+async def auto_fix_endpoint(req: AutoFixRequest):
+    """Generate an AI code fix and open a PR on GitHub."""
+    try:
+        if not req.token:
+            raise HTTPException(
+                status_code=400,
+                detail="GitHub token with `repo` scope is required for auto-fix.",
+            )
+
+        result = autofix.auto_fix(
+            repo_url=req.repo_url,
+            token=req.token,
+            file_path=req.file_path,
+            finding=req.finding,
+        )
+        return result
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Auto-fix failed: {str(e)}")
+
+
+# ══════════════════════════════════════════════════
 # ADMIN — Seed + manage audit questions in Supabase
 # ══════════════════════════════════════════════════
 
@@ -589,32 +639,64 @@ async def get_audit_questions_for_control(control_id: str):
 
 
 # ══════════════════════════════════════════════════
-# GITHUB WEBHOOK — Runs on every push to main
-# Called by GitHub Actions CI/CD pipeline
+# GITHUB APP WEBHOOK — Auto-scans on every push/PR
+# Handles real GitHub App webhook payloads + legacy format
 # ══════════════════════════════════════════════════
 
-class GitHubWebhookPayload(BaseModel):
-    repo_url: str
-    ref: str = "refs/heads/main"
-    commit_sha: str = ""
-    token: str = ""
+from fastapi import Request
 
 
 @app.post("/api/webhook/github")
-async def github_webhook(payload: GitHubWebhookPayload):
+async def github_webhook(request: Request):
     """
-    Called by GitHub Actions on every push to main.
-    Scans the repo and returns pass/fail + findings.
-    Exit code 1 (via failed field) will fail the CI build.
+    GitHub App webhook — triggered on push/PR events.
+    Accepts both:
+      1. Real GitHub App payloads (push event with repository object)
+      2. Legacy format (repo_url + ref from GitHub Actions)
     """
-    if "refs/heads/main" not in payload.ref and "refs/heads/master" not in payload.ref:
-        return {"skipped": True, "reason": f"Not a main/master push: {payload.ref}"}
+    body = await request.json()
+
+    # ── Parse payload (handle both formats) ──
+    repo_url = ""
+    ref = ""
+    commit_sha = ""
+    token = os.getenv("GITHUB_DEFAULT_TOKEN", "")
+    event_type = request.headers.get("X-GitHub-Event", "push")
+
+    if "repository" in body:
+        # Real GitHub App webhook payload
+        repo_data = body["repository"]
+        repo_url = repo_data.get("html_url") or repo_data.get("clone_url", "")
+        ref = body.get("ref", "")
+        commit_sha = body.get("after", body.get("head_commit", {}).get("id", ""))
+
+        # For pull_request events
+        if event_type == "pull_request":
+            pr = body.get("pull_request", {})
+            ref = f"refs/heads/{pr.get('head', {}).get('ref', 'main')}"
+            repo_url = pr.get("head", {}).get("repo", {}).get("html_url", repo_url)
+
+        print(f"[Webhook] GitHub App event: {event_type} on {repo_url} ref={ref}")
+    else:
+        # Legacy format (from GitHub Actions or manual calls)
+        repo_url = body.get("repo_url", "")
+        ref = body.get("ref", "refs/heads/main")
+        commit_sha = body.get("commit_sha", "")
+        token = body.get("token", "") or token
+        print(f"[Webhook] Legacy format: {repo_url} ref={ref}")
+
+    if not repo_url:
+        return {"skipped": True, "reason": "No repository URL found in payload"}
+
+    # Only scan pushes to main/master
+    if ref and "refs/heads/main" not in ref and "refs/heads/master" not in ref:
+        return {"skipped": True, "reason": f"Not a main/master push: {ref}"}
 
     try:
-        # Use LangGraph pipeline for webhook scans too
+        # Run LangGraph multi-agent scan
         final_state = agent_graph.run_compliance_scan(
-            repo_url=payload.repo_url,
-            token=payload.token or None,
+            repo_url=repo_url,
+            token=token or None,
             max_files=100,
         )
 
@@ -623,45 +705,50 @@ async def github_webhook(payload: GitHubWebhookPayload):
         challenged = final_state.get("challenged", []) or findings
         full_metrics = final_state.get("full_metrics", {})
 
-        critical_count = full_metrics["severity_counts"].get("CRITICAL", 0)
-        immediate_count = full_metrics["triage_counts"].get("IMMEDIATE_ACTION", 0)
+        severity_counts = full_metrics.get("severity_counts", {})
+        triage_counts = full_metrics.get("triage_counts", {})
+        critical_count = severity_counts.get("CRITICAL", 0)
+        immediate_count = triage_counts.get("IMMEDIATE_ACTION", 0)
 
         # Save to Supabase
         try:
             db.save_github_scan(
-                repo=scan_result["repo"],
+                repo=scan_result.get("repo", ""),
                 findings_count=len(findings),
-                severity_counts=full_metrics["severity_counts"],
+                severity_counts=severity_counts,
                 score=max(0, 100 - int((len(findings) / 33) * 100)),
                 raw_findings=challenged,
-                triage_counts=full_metrics["triage_counts"],
+                triage_counts=triage_counts,
             )
         except Exception as e:
             print(f"Failed to save GitHub scan to DB: {e}")
 
-        # Build summary for GitHub Actions output
+        # Build summary
+        files_scanned = scan_result.get("files_scanned", 0)
         summary_lines = [
-            f"ComplianceAI scan: {len(findings)} violations in {scan_result['files_scanned']} files",
-            f"Severity: {full_metrics['severity_counts']}",
-            f"Triage: {immediate_count} IMMEDIATE_ACTION | {full_metrics['triage_counts'].get('HIGH_PRIORITY', 0)} HIGH_PRIORITY",
+            f"ComplianceAI scan: {len(findings)} violations in {files_scanned} files",
+            f"Severity: {severity_counts}",
+            f"Triage: {immediate_count} IMMEDIATE_ACTION | {triage_counts.get('HIGH_PRIORITY', 0)} HIGH_PRIORITY",
         ]
         if critical_count > 0:
-            summary_lines.append(f"❌ {critical_count} CRITICAL violations — build blocked")
+            summary_lines.append(f"{critical_count} CRITICAL violations — build blocked")
         else:
-            summary_lines.append("✅ No CRITICAL violations — build allowed")
+            summary_lines.append("No CRITICAL violations — build allowed")
 
         return {
-            "repo": scan_result["repo"],
-            "commit_sha": payload.commit_sha,
-            "files_scanned": scan_result["files_scanned"],
+            "repo": scan_result.get("repo", ""),
+            "commit_sha": commit_sha,
+            "event_type": event_type,
+            "files_scanned": files_scanned,
             "total_findings": len(findings),
-            "severity_counts": full_metrics["severity_counts"],
-            "triage_counts": full_metrics["triage_counts"],
-            "soc2_metrics": full_metrics["soc2_metrics"],
-            "framework_metrics": full_metrics["framework_metrics"],
+            "severity_counts": severity_counts,
+            "triage_counts": triage_counts,
+            "soc2_metrics": full_metrics.get("soc2_metrics", {}),
+            "framework_metrics": full_metrics.get("framework_metrics", {}),
             "critical_count": critical_count,
             "build_passed": critical_count == 0,
             "summary": "\n".join(summary_lines),
+            "agent_trace": final_state.get("agent_trace", []),
             "top_findings": [
                 {
                     "file": f.get("file"),

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_URL } from "../config";
 import "./PramanikAI.css";
 
 export default function PramanikAI() {
@@ -27,7 +28,7 @@ export default function PramanikAI() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("http://localhost:3001/api/pramanik/gap-analysis", {
+      const response = await fetch(`${API_URL}/api/pramanik/gap-analysis`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(gapConfig),
@@ -72,7 +73,7 @@ export default function PramanikAI() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("http://localhost:3001/api/pramanik/policy", {
+      const response = await fetch(`${API_URL}/api/pramanik/policy`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(policyForm),
@@ -93,7 +94,7 @@ export default function PramanikAI() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("http://localhost:3001/api/pramanik/ghost-audit", {
+      const response = await fetch(`${API_URL}/api/pramanik/ghost-audit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
@@ -136,7 +137,7 @@ export default function PramanikAI() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("http://localhost:3001/api/pramanik/vendor-inheritance", {
+      const response = await fetch(`${API_URL}/api/pramanik/vendor-inheritance`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ vendors }),
@@ -166,7 +167,7 @@ export default function PramanikAI() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("http://localhost:3001/api/pramanik/breach-analysis", {
+      const response = await fetch(`${API_URL}/api/pramanik/breach-analysis`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ breachName, userConfig: gapConfig }),
@@ -194,7 +195,7 @@ export default function PramanikAI() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("http://localhost:3001/api/pramanik/certification-path", {
+      const response = await fetch(`${API_URL}/api/pramanik/certification-path`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(profile),

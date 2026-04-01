@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_URL } from "../config";
 import { AlertTriangle, ArrowUp, ArrowDown, Minus, RefreshCw, Loader2, Shield } from "lucide-react";
 
 export default function DriftView({ companyName, config }) {
@@ -10,7 +11,7 @@ export default function DriftView({ companyName, config }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("http://localhost:3001/api/drift", {
+      const response = await fetch(`${API_URL}/api/drift`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ company_name: companyName, config }),

@@ -4,7 +4,7 @@ Adversary Agent — AI-powered compliance auditor that challenges every finding.
 Architecture (two-stage):
   Stage 1 — Rule-based triage (audit_memory.py): ALWAYS runs, no API needed.
              Scores every finding, attaches audit questions from memory.
-  Stage 2 — AI challenge (Bedrock/Groq): Only runs on IMMEDIATE_ACTION + HIGH_PRIORITY findings.
+  Stage 2 — AI challenge (Groq LLaMA 3.3 70B): Only runs on IMMEDIATE_ACTION + HIGH_PRIORITY findings.
              Challenges each one like a Big 4 auditor.
 
 This means the tool always produces useful output even if AI is unavailable.
@@ -13,6 +13,7 @@ This means the tool always produces useful output even if AI is unavailable.
 import json
 import audit_memory
 import groq_service
+from ai_provider import ai as ai_service
 
 
 def _build_challenge_prompt(findings: list, repo_name: str) -> str:
@@ -82,19 +83,14 @@ def challenge_findings(findings: list, repo_name: str = "Unknown") -> list:
         raw = None
 
         try:
-            client = groq_service._get_client()
-            resp = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[
-                    {"role": "system", "content": "You are a strict SOC 2 Type 2 auditor. Return only valid JSON arrays. No markdown."},
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.2,
+            raw = ai_service.call_llm(
+                prompt=prompt,
+                system="You are a strict SOC 2 Type 2 auditor. Return only valid JSON arrays. No markdown.",
                 max_tokens=2500,
+                temperature=0.2,
             )
-            raw = resp.choices[0].message.content
         except Exception as e:
-            print(f"Adversary: Groq failed ({e}), using rule-based only")
+            print(f"Adversary: AI failed ({e}), using rule-based only")
 
         if raw:
             try:
