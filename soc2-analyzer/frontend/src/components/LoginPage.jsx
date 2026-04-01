@@ -61,12 +61,8 @@ export default function LoginPage({ onLogin, onBack }) {
 
       {/* ── TOP NAV ── */}
       <nav className="absolute top-0 inset-x-0 z-20 max-w-[1400px] mx-auto px-8 py-8 flex items-center justify-between pointer-events-none">
-        <div className="flex items-center gap-3 pointer-events-auto cursor-pointer group" onClick={onBack}>
-          <div className="w-10 h-10 flex items-center justify-center bg-[hsl(var(--col-surface))] border border-[hsl(var(--col-border))] rounded-xl shadow-sm group-hover:border-[hsl(var(--col-primary)/0.5)] transition-all">
-            <img src="/logo.png" alt="Pramanik" className="w-6 h-6 object-contain" onError={e => e.target.style.display='none'} />
-            <Shield className="w-5 h-5 text-[hsl(var(--col-primary))]" style={{ display: 'none' }} />
-          </div>
-          <span className="font-bold text-[18px] tracking-tight group-hover:text-[hsl(var(--col-primary))] transition-colors">PRAMANIK</span>
+        <div className="flex items-center pointer-events-auto cursor-pointer group transition-opacity hover:opacity-80" onClick={onBack}>
+          <span className="font-extrabold text-[28px] tracking-tighter text-[#1eaba3] drop-shadow-sm">Pramanik</span>
         </div>
         <div className="flex items-center gap-3 pointer-events-auto">
           {onBack && (

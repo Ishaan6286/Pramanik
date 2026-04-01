@@ -1,0 +1,59 @@
+On branch main
+Your branch and 'origin/main' have diverged,
+and have 6 and 1 different commits each, respectively.
+  (use "git pull" if you want to integrate the remote branch with yours)
+
+You have unmerged paths.
+  (fix conflicts and run "git commit")
+  (use "git merge --abort" to abort the merge)
+
+Changes to be committed:
+	new file:   .github/workflows/compliance-scan.yml
+	modified:   soc2-analyzer/backend/adversary_agent.py
+	new file:   soc2-analyzer/backend/agent_graph.py
+	modified:   soc2-analyzer/backend/audit_memory.py
+	modified:   soc2-analyzer/backend/github_agent.py
+	modified:   soc2-analyzer/backend/main.py
+	modified:   soc2-analyzer/backend/requirements.txt
+	modified:   soc2-analyzer/frontend/index.html
+	new file:   soc2-analyzer/frontend/public/logo.png
+	new file:   soc2-analyzer/logo.png
+
+Unmerged paths:
+  (use "git add <file>..." to mark resolution)
+	both modified:   soc2-analyzer/frontend/src/components/Dashboard.jsx
+	both modified:   soc2-analyzer/frontend/src/components/LandingPage.jsx
+	both modified:   soc2-analyzer/frontend/src/components/UploadPage.jsx
+
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   soc2-analyzer/backend/deepseek_service.py
+	modified:   soc2-analyzer/backend/server.js
+	modified:   soc2-analyzer/backend/services/groqService.js
+	modified:   soc2-analyzer/frontend/node_modules/.package-lock.json
+	modified:   soc2-analyzer/frontend/node_modules/.vite/deps/_metadata.json
+	modified:   soc2-analyzer/frontend/node_modules/.vite/deps/jspdf.js
+	modified:   soc2-analyzer/frontend/node_modules/.vite/deps/jspdf.js.map
+	modified:   soc2-analyzer/frontend/node_modules/.vite/deps/lucide-react.js
+	modified:   soc2-analyzer/frontend/node_modules/.vite/deps/lucide-react.js.map
+	modified:   soc2-analyzer/frontend/node_modules/.vite/deps/package.json
+	modified:   soc2-analyzer/frontend/node_modules/.vite/deps/react-dom.js
+	modified:   soc2-analyzer/frontend/node_modules/.vite/deps/react-dom.js.map
+	modified:   soc2-analyzer/frontend/node_modules/.vite/deps/react-dom_client.js
+	modified:   soc2-analyzer/frontend/node_modules/.vite/deps/react-dom_client.js.map
+	modified:   soc2-analyzer/frontend/node_modules/.vite/deps/react.js
+	modified:   soc2-analyzer/frontend/node_modules/.vite/deps/react.js.map
+	modified:   soc2-analyzer/frontend/node_modules/.vite/deps/react_jsx-dev-runtime.js
+	modified:   soc2-analyzer/frontend/node_modules/.vite/deps/react_jsx-dev-runtime.js.map
+	modified:   soc2-analyzer/frontend/node_modules/.vite/deps/react_jsx-runtime.js
+	modified:   soc2-analyzer/frontend/node_modules/.vite/deps/react_jsx-runtime.js.map
+	deleted:    soc2-analyzer/frontend/node_modules/@esbuild/darwin-arm64/README.md
+	deleted:    soc2-analyzer/frontend/node_modules/@esbuild/darwin-arm64/bin/esbuild
+	deleted:    soc2-analyzer/frontend/node_modules/@esbuild/darwin-arm64/package.json
+	modified:   soc2-analyzer/frontend/package-lock.json
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	status.txt
+

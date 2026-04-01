@@ -195,12 +195,9 @@ export default function UploadPage({ onAnalysis, onBack, loading, setLoading, us
       <div className="absolute inset-0 z-0 bg-pattern-plus opacity-[0.18] pointer-events-none" />
 
       {/* ── TOP NAV ── */}
-      <header className="relative z-50 max-w-[1400px] mx-auto px-8 h-16 flex items-center justify-between border-b border-[hsl(var(--col-border))] bg-white/70">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center border border-[hsl(var(--col-border))] bg-[hsl(var(--col-primary)/0.10)]">
-            <Shield className="w-4.5 h-4.5 text-[hsl(var(--col-primary))]" />
-          </div>
-          <span className="font-bold tracking-tight text-[16px] uppercase">Pramanik</span>
+      <header className="relative z-50 max-w-[1400px] mx-auto px-8 h-16 flex items-center justify-between border-b border-[hsl(var(--col-border))] bg-[hsl(var(--col-bg)/0.8)] backdrop-blur-md">
+        <div className="flex items-center">
+          <span className="font-extrabold text-[24px] tracking-tighter text-[#1eaba3] drop-shadow-sm">Pramanik</span>
         </div>
 
         <div className="flex items-center gap-4">
@@ -244,7 +241,7 @@ export default function UploadPage({ onAnalysis, onBack, loading, setLoading, us
                         <button
                           key={fw.key}
                           onClick={() => toggleFramework(fw.key)}
-                          className={`relative p-4 rounded-2xl text-left border transition-all group overflow-hidden ${selected ? 'bg-white/75 border-[hsl(var(--col-primary)/0.35)]' : 'bg-white/55 border-[hsl(var(--col-border))] hover:bg-white/70 hover:border-[hsl(var(--col-primary)/0.22)]'}`}
+                          className={`relative p-4 rounded-2xl text-left border transition-all group overflow-hidden ${selected ? 'bg-[hsl(var(--col-raise))] border-[hsl(var(--col-primary)/0.35)] shadow-sm' : 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-border))] hover:bg-[hsl(var(--col-raise))] hover:border-[hsl(var(--col-primary)/0.22)]'}`}
                         >
                           <div className="flex items-center gap-3 mb-1">
                              <div className="w-6 h-6 rounded-full flex items-center justify-center border border-[hsl(var(--col-border))]" style={{ backgroundColor: selected ? fw.color : 'transparent', color: selected ? 'rgba(255,255,255,0.95)' : 'transparent' }}>
@@ -284,7 +281,7 @@ export default function UploadPage({ onAnalysis, onBack, loading, setLoading, us
                     className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-[14px] font-bold border transition-all focus:outline-none focus:ring-4 focus:ring-[hsl(var(--col-primary))/0.10]
                       ${mode === "upload"
                         ? 'bg-[hsl(var(--col-primary)/0.07)] border-[hsl(var(--col-primary)/0.25)] text-[hsl(var(--col-primary))]'
-                        : 'bg-white/55 border-[hsl(var(--col-border))] text-[hsl(var(--col-muted))] hover:bg-white/70 hover:border-[hsl(var(--col-primary)/0.18)]'}`}
+                        : 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-border))] text-[hsl(var(--col-muted))] hover:bg-[hsl(var(--col-raise))] hover:border-[hsl(var(--col-primary)/0.18)]'}`}
                   >
                     <UploadCloud className="w-4 h-4" />
                     Local Config
@@ -295,7 +292,7 @@ export default function UploadPage({ onAnalysis, onBack, loading, setLoading, us
                     className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-[14px] font-bold border transition-all focus:outline-none focus:ring-4 focus:ring-[hsl(var(--col-primary))/0.10]
                       ${mode === "aws"
                         ? 'bg-[hsl(var(--col-primary)/0.07)] border-[hsl(var(--col-primary)/0.25)] text-[hsl(var(--col-primary))]'
-                        : 'bg-white/55 border-[hsl(var(--col-border))] text-[hsl(var(--col-muted))] hover:bg-white/70 hover:border-[hsl(var(--col-primary)/0.18)]'}`}
+                        : 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-border))] text-[hsl(var(--col-muted))] hover:bg-[hsl(var(--col-raise))] hover:border-[hsl(var(--col-primary)/0.18)]'}`}
                   >
                     <Cloud className="w-4 h-4" />
                     Connect AWS
@@ -306,7 +303,7 @@ export default function UploadPage({ onAnalysis, onBack, loading, setLoading, us
                     className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-[14px] font-bold border transition-all focus:outline-none focus:ring-4 focus:ring-[hsl(var(--col-primary))/0.10]
                       ${mode === "github"
                         ? 'bg-[hsl(var(--col-primary)/0.07)] border-[hsl(var(--col-primary)/0.25)] text-[hsl(var(--col-primary))]'
-                        : 'bg-white/55 border-[hsl(var(--col-border))] text-[hsl(var(--col-muted))] hover:bg-white/70 hover:border-[hsl(var(--col-primary)/0.18)]'}`}
+                        : 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-border))] text-[hsl(var(--col-muted))] hover:bg-[hsl(var(--col-raise))] hover:border-[hsl(var(--col-primary)/0.18)]'}`}
                   >
                     <Github className="w-4 h-4" />
                     Scan GitHub
@@ -324,7 +321,7 @@ export default function UploadPage({ onAnalysis, onBack, loading, setLoading, us
               {/* AWS Connect View */}
               {mode === "aws" && (
                 <div className="w-full space-y-6">
-                  <div className="surface-raise p-10 rounded-[32px] bg-white border border-[hsl(var(--col-border))] space-y-6">
+                  <div className="surface-raise p-10 rounded-[32px] bg-[hsl(var(--col-surface))] border border-[hsl(var(--col-border))] space-y-6">
                     <div className="flex items-center gap-4 mb-4">
                        <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center">
                           <Cloud className="w-6 h-6 text-amber-500" />
@@ -383,10 +380,10 @@ export default function UploadPage({ onAnalysis, onBack, loading, setLoading, us
                     onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
                     className={`relative w-full rounded-[32px] transition-all duration-500 overflow-hidden cursor-pointer flex flex-col items-center justify-center p-20 border-2 border-dashed
                       ${file 
-                        ? 'bg-white border-[hsl(var(--col-primary))] shadow-[0_20px_60px_-10px_rgba(30,171,163,0.1)]' 
+                        ? 'bg-[hsl(var(--col-raise))] border-[hsl(var(--col-primary))] shadow-sm' 
                         : isDragActive 
-                          ? 'bg-white border-[hsl(var(--col-primary))] ring-8 ring-[hsl(var(--col-primary)/0.03)]' 
-                          : 'bg-white/50 border-[hsl(var(--col-border))] hover:border-[hsl(var(--col-primary)/0.3)] hover:bg-white'}`}
+                          ? 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-primary))] ring-8 ring-[hsl(var(--col-primary)/0.05)]' 
+                          : 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-border))] hover:border-[hsl(var(--col-primary)/0.3)] hover:bg-[hsl(var(--col-raise))]'}`}
                     onClick={() => !file && fileRef.current.click()}
                   >
                     <input type="file" ref={fileRef} hidden accept=".json" onChange={e => handleDrop({ preventDefault:()=>{}, stopPropagation:()=>{}, dataTransfer:{files:e.target.files} })} />

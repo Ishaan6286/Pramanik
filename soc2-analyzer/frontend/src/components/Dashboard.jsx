@@ -61,11 +61,8 @@ export default function Dashboard({ data, config, onReset, user, onLogout }) {
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-[hsl(var(--col-border))] bg-white/80">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center border border-[hsl(var(--col-border))] bg-[hsl(var(--col-primary)/0.10)]">
-                <Shield className="w-4.5 h-4.5 text-[hsl(var(--col-primary))]" />
-              </div>
-              <h2 className="font-bold tracking-tight text-[16px] uppercase">Pramanik</h2>
+            <div className="flex items-center">
+              <span className="font-extrabold text-[24px] tracking-tighter text-[#1eaba3] drop-shadow-sm">Pramanik</span>
             </div>
 
             <nav className="hidden md:flex items-center gap-1 ml-6 pl-6 border-l border-[hsl(var(--col-border))]">

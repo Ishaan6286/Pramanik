@@ -1,0 +1,183 @@
+diff --cc soc2-analyzer/frontend/src/components/Dashboard.jsx
+index 7111a96,8cb1631..0000000
+--- a/soc2-analyzer/frontend/src/components/Dashboard.jsx
++++ b/soc2-analyzer/frontend/src/components/Dashboard.jsx
+@@@ -1,79 -1,108 +1,116 @@@
+  import { useState } from "react";
+++<<<<<<< HEAD
+ +import { motion } from "framer-motion";
+ +import { 
+ +  Shield, AlertTriangle, CheckCircle2, 
+ +  LogOut, ChevronRight, Zap, Globe, MoreHorizontal, LayoutGrid,
+ +  RefreshCw, ArrowRight
+ +} from "lucide-react";
+++=======
++ import { ArrowLeft, BarChart3, FileText, TrendingUp, HelpCircle, LogOut, Zap, Globe, GitCompare } from "lucide-react";
++ import ControlCard from "./ControlCard";
++ import PolicyViewer from "./PolicyViewer";
++ import PDFExport from "./PDFExport";
++ import BenchmarkCard from "./BenchmarkCard";
++ import AuditPrep from "./AuditPrep";
+++>>>>>>> f953903ce1afe657a4cade1372bf3e5987da8933
+  import ThemeToggle from "./ThemeToggle";
+ -import PriorityFix from "./PriorityFix";
+ -import FrameworkScores from "./FrameworkScores";
+ -import DriftView from "./DriftView";
+ +
+ +const fadeUp = {
+ +  hidden:  { opacity: 0, y: 15 },
+ +  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.2, 0, 0, 1] } }
+ +};
+ +
+ +const staggerContainer = {
+ +  hidden: {},
+ +  visible: { transition: { staggerChildren: 0.1 } }
+ +};
+  
+  export default function Dashboard({ data, config, onReset, user, onLogout }) {
+ -  const [activeTab, setActiveTab] = useState("controls");
+ +  const [activeTab, setActiveTab] = useState("overview");
+  
+ -  const scoreColor = data.score >= 70 ? "#22c55e" : data.score >= 40 ? "#eab308" : "#ef4444";
+ -  const circumference = 2 * Math.PI * 45;
+ -  const offset = circumference - (data.score / 100) * circumference;
+ +  const score = data?.score || 92;
+ +  const criticalGaps = data?.gaps || 2;
+ +  const userName = user?.split('@')[0] || "Pratyush";
+  
+ -  const criticalCount = data.results.filter(r => r.severity === "CRITICAL").length;
+ -  const highCount = data.results.filter(r => r.severity === "HIGH").length;
+ -  const mediumCount = data.results.filter(r => r.severity === "MEDIUM").length;
+ +  const navItems = [
+ +    { id: "overview", label: "Overview", icon: LayoutGrid },
+ +    { id: "audits", label: "Compliance", icon: Shield },
+ +    { id: "engine", label: "Engine", icon: Zap },
+ +    { id: "topology", label: "Topology", icon: Globe },
+ +  ];
+  
+    return (
+++<<<<<<< HEAD
+ +    <div className="min-h-screen bg-[hsl(var(--col-bg))] text-[hsl(var(--col-text))] pb-40 relative selection:bg-[hsl(var(--col-primary)/0.2)] font-display">
+ +      
+ +      {/* ── Ambient Pattern ── */}
+ +      <div className="absolute inset-0 z-0 bg-pattern-plus opacity-[0.4] pointer-events-none" />
+++=======
++     <div className="min-h-screen" style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}>
++       {/* Top Bar */}
++       <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
++         <div className="flex items-center gap-3">
++           <button onClick={onReset} className="hover:opacity-70" style={{ color: "var(--text-secondary)" }}>
++             <ArrowLeft className="w-5 h-5" />
++           </button>
++           <img src="/logo.png" alt="ComplianceAI" style={{ height: 52, width: "auto", objectFit: "contain" }} />
++           <span style={{ color: "var(--text-muted)" }}>|</span>
++           <span style={{ color: "var(--text-secondary)" }} className="text-sm">{data.company_name}</span>
++         </div>
++         <div className="flex items-center gap-3">
++           <PDFExport data={data} />
++           <ThemeToggle />
++           {onLogout && (
++             <button
++               onClick={onLogout}
++               className="p-2 rounded-lg hover:opacity-80"
++               style={{ background: "var(--bg-hover)", color: "var(--text-secondary)" }}
++             >
++               <LogOut className="w-4 h-4" />
++             </button>
++           )}
++         </div>
++       </div>
+++>>>>>>> f953903ce1afe657a4cade1372bf3e5987da8933
+  
+ -      <div className="max-w-5xl mx-auto px-6 mt-8">
+ -        {/* Score Section */}
+ -        <div className="glass p-6 mb-8 fade-in">
+ -          <div className="flex flex-col md:flex-row items-center gap-8">
+ -            {/* Score Ring */}
+ -            <div className="relative">
+ -              <svg width="120" height="120" viewBox="0 0 100 100">
+ -                <circle cx="50" cy="50" r="45" fill="none" stroke="var(--border)" strokeWidth="6" />
+ -                <circle
+ -                  cx="50" cy="50" r="45" fill="none"
+ -                  stroke={scoreColor} strokeWidth="6"
+ -                  strokeLinecap="round"
+ -                  strokeDasharray={circumference}
+ -                  strokeDashoffset={offset}
+ -                  className="score-ring"
+ -                  transform="rotate(-90 50 50)"
+ -                />
+ -              </svg>
+ -              <div className="absolute inset-0 flex flex-col items-center justify-center">
+ -                <span className="text-3xl font-bold" style={{ color: scoreColor }}>{data.score}%</span>
+ -              </div>
+ -            </div>
+ -
+ -            {/* Stats */}
+ -            <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+ -              <div className="text-center p-3 rounded-lg" style={{ background: "var(--bg-hover)" }}>
+ -                <div className="text-2xl font-bold">{data.passed}/{data.total}</div>
+ -                <div className="text-xs" style={{ color: "var(--text-muted)" }}>Controls Passed</div>
+ -              </div>
+ -              <div className="text-center p-3 rounded-lg" style={{ background: "var(--bg-hover)" }}>
+ -                <div className="text-2xl font-bold text-red-500">{criticalCount}</div>
+ -                <div className="text-xs" style={{ color: "var(--text-muted)" }}>Critical</div>
+ -              </div>
+ -              <div className="text-center p-3 rounded-lg" style={{ background: "var(--bg-hover)" }}>
+ -                <div className="text-2xl font-bold text-orange-500">{highCount}</div>
+ -                <div className="text-xs" style={{ color: "var(--text-muted)" }}>High</div>
+ -              </div>
+ -              <div className="text-center p-3 rounded-lg" style={{ background: "var(--bg-hover)" }}>
+ -                <div className="text-2xl font-bold text-yellow-500">{mediumCount}</div>
+ -                <div className="text-xs" style={{ color: "var(--text-muted)" }}>Medium</div>
+ -              </div>
+ -            </div>
+ +      {/* ── TOP HEADER ── */}
+ +      <header className="fixed top-0 left-0 right-0 z-50 border-b border-[hsl(var(--col-border))] bg-white/70 backdrop-blur-md">
+ +        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+ +          <div className="flex items-center gap-6">
+ +             <div className="flex items-center gap-3">
+ +               <div className="w-8 h-8 bg-gradient-to-br from-[hsl(var(--col-primary))] to-[hsl(var(--col-accent))] rounded-lg flex items-center justify-center shadow-md">
+ +                 <Shield className="w-4.5 h-4.5 text-white" />
+ +               </div>
+ +               <h2 className="font-bold tracking-tight text-[16px] uppercase">Pramanik</h2>
+ +             </div>
+ +             
+ +             <nav className="hidden md:flex items-center gap-1 ml-6 pl-6 border-l border-[hsl(var(--col-border))]">
+ +               {navItems.map(item => (
+ +                 <button
+ +                   key={item.id}
+ +                   onClick={() => setActiveTab(item.id)}
+ +                   className={`px-4 py-1.5 rounded-full text-[13px] font-bold transition-all ${activeTab === item.id ? 'bg-[hsl(var(--col-primary)/0.1)] text-[hsl(var(--col-primary))]' : 'text-[hsl(var(--col-muted))] hover:text-[hsl(var(--col-text))] hover:bg-[hsl(var(--col-primary)/0.03)]'}`}
+ +                 >
+ +                   {item.label}
+ +                 </button>
+ +               ))}
+ +             </nav>
+            </div>
+  
+ -          {/* Progress bar */}
+ -          <div className="mt-5">
+ -            <div className="flex justify-between text-xs mb-1.5" style={{ color: "var(--text-muted)" }}>
+ -              <span>{data.passed} passed</span>
+ -              <span>{data.total - data.passed} failed</span>
+ +          <div className="flex items-center gap-4">
+ +            <div className="hidden sm:flex items-center gap-2 mr-4 text-[12px] font-bold text-[hsl(var(--col-accent))] bg-[hsl(var(--col-accent)/0.08)] px-3 py-1 rounded-full border border-[hsl(var(--col-accent)/0.1)]">
+ +               <span className="w-2 h-2 rounded-full bg-[hsl(var(--col-accent))] animate-pulse"/> Core Active
+              </div>
+ -            <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
+ -              <div
+ -                className="h-full rounded-full"
+ -                style={{ width: `${data.score}%`, background: scoreColor }}
+ -              />
+ +            <ThemeToggle />
+ +            <div className="w-px h-5 bg-[hsl(var(--col-border))]" />
+ +            <div className="flex items-center gap-3 pl-2 group cursor-pointer">
+ +               <div className="w-8 h-8 rounded-full bg-[hsl(var(--col-primary)/0.1)] border border-[hsl(var(--col-primary)/0.2)] flex items-center justify-center text-[11px] font-black text-[hsl(var(--col-primary))] uppercase">
+ +                  {userName.substring(0,1)}
+ +               </div>
+ +               <button onClick={onLogout} className="text-[hsl(var(--col-muted))] hover:text-[hsl(var(--col-primary))] transition-colors">
+ +                 <LogOut className="w-4 h-4" />
+ +               </button>
+              </div>
+            </div>
+          </div>

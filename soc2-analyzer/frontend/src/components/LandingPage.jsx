@@ -1,11 +1,12 @@
-import { Shield, FileText, Lock, ArrowRight, CheckCircle, Database, Bot, FileSearch } from "lucide-react";
+import { Shield, FileText, Lock, ArrowRight, CheckCircle, Database, Bot, FileSearch, Book, Cloud, Search, List, Zap, Server, GitMerge, Activity, FolderOpen, Bell, Globe } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { lazy, Suspense, Component } from "react";
+import { lazy, Suspense, Component, useState } from "react";
 import ThemeToggle from "./ThemeToggle";
 import DotGrid from "./DotGrid";
 import Aurora from "./Aurora";
 import BeamBackground from "./BeamBackground";
 import { useTheme } from "../ThemeContext";
+import PricingSection from "./PricingSection";
 
 // Lazy-load the heavy 3D component so it doesn't block the initial render
 const Hyperspeed = lazy(() => import("./Hyperspeed"));
@@ -17,8 +18,61 @@ class WebGLBoundary extends Component {
   render() { return this.state.failed ? null : this.props.children; }
 }
 
+const FEATURES = [
+  {
+    title: "LLM Multi-Agent Evaluator",
+    inputs: [
+      { icon: FileText, title: "Raw Policies", sub: "PDFs, CSVs", color: "col-primary" },
+      { icon: Database, title: "Cloud Logs", sub: "AWS, GCP, Azure", color: "col-accent" }
+    ],
+    core: { icon: Bot, title: "AI Engine", sub: "Inference Core", color: "col-primary", glow: "from-[hsl(var(--col-primary))] via-[#6aeada] to-[hsl(var(--col-accent))]" },
+    outputs: [
+      { icon: Shield, title: "Compliance State", sub: "100% Passing", subClass: "text-emerald-500 bg-emerald-500/10", color: "col-accent" },
+      { icon: FileSearch, title: "Gap Analysis", sub: "Actionable Fixes", subClass: "text-[hsl(var(--col-muted))]", color: "col-primary" }
+    ]
+  },
+  {
+    title: "Vector Knowledge Base",
+    inputs: [
+      { icon: Book, title: "Frameworks", sub: "SOC 2, ISO, HIPAA", color: "col-primary" },
+      { icon: Cloud, title: "Prior Audits", sub: "Historical Evidence", color: "col-accent" }
+    ],
+    core: { icon: Database, title: "Vector DB", sub: "Semantic Search", color: "col-accent", glow: "from-[hsl(var(--col-accent))] via-[#a5b4fc] to-[hsl(var(--col-primary))]" },
+    outputs: [
+      { icon: Search, title: "Control Match", sub: "High Confidence", subClass: "text-blue-500 bg-blue-500/10", color: "col-accent" },
+      { icon: CheckCircle, title: "Evidence Map", sub: "Auto-Linked", subClass: "text-[hsl(var(--col-muted))]", color: "col-primary" }
+    ]
+  },
+  {
+    title: "Dynamic Policy Extraction",
+    inputs: [
+      { icon: FileText, title: "PDF Manuals", sub: "Unstructured Data", color: "col-primary" },
+      { icon: Globe, title: "Web Sources", sub: "Compliance Portals", color: "col-accent" }
+    ],
+    core: { icon: Zap, title: "Parser Engine", sub: "NLP Extraction", color: "col-primary", glow: "from-amber-400 via-orange-400 to-[hsl(var(--col-primary))]" },
+    outputs: [
+      { icon: List, title: "Structured DB", sub: "JSON formatted", subClass: "text-amber-500 bg-amber-500/10", color: "col-accent" },
+      { icon: Shield, title: "Mapped Rules", sub: "Ready-to-use", subClass: "text-[hsl(var(--col-muted))]", color: "col-primary" }
+    ]
+  },
+  {
+    title: "Continuous Evidence Collection",
+    inputs: [
+      { icon: Server, title: "Live Infra", sub: "AWS Config", color: "col-primary" },
+      { icon: GitMerge, title: "CI/CD Pipes", sub: "GitHub, GitLab", color: "col-accent" }
+    ],
+    core: { icon: Activity, title: "Sync Agent", sub: "Real-time Poll", color: "col-accent", glow: "from-emerald-400 via-teal-400 to-[hsl(var(--col-primary))]" },
+    outputs: [
+      { icon: FolderOpen, title: "Audit Folders", sub: "Auto-filed", subClass: "text-emerald-500 bg-emerald-500/10", color: "col-accent" },
+      { icon: Bell, title: "Drift Alerts", sub: "Actionable", subClass: "text-[hsl(var(--col-muted))]", color: "col-primary" }
+    ]
+  }
+];
+
 export default function LandingPage({ onGetStarted, onChat }) {
   const { dark } = useTheme();
+  const [activeFeatureIndex, setActiveFeatureIndex] = useState(0);
+  const activeFeature = FEATURES[activeFeatureIndex];
 
   return (
     <div className="min-h-screen bg-[hsl(var(--col-bg))] text-[hsl(var(--col-text))]">
@@ -28,9 +82,8 @@ export default function LandingPage({ onGetStarted, onChat }) {
 
       {/* ══ NAV ══ */}
       <nav className="flex items-center justify-between px-8 py-5 max-w-6xl mx-auto">
-        <div className="flex items-center gap-2">
-          <Shield className="w-7 h-7 text-[hsl(var(--col-primary))]" />
-          <span className="text-xl font-bold">SOC2 Analyzer</span>
+        <div className="flex items-center cursor-pointer hover:opacity-90 transition-opacity">
+          <span className="font-extrabold text-[26px] tracking-tighter text-[#1eaba3] drop-shadow-sm">Pramanik</span>
         </div>
         <div className="flex items-center gap-4">
           <ThemeToggle />
@@ -269,7 +322,7 @@ export default function LandingPage({ onGetStarted, onChat }) {
                   {card.desc}
                 </p>
                 {i === 0 && (
-                  <a href="#" className="mt-6 inline-flex items-center gap-2 font-semibold text-[hsl(var(--col-primary))] hover:gap-3 transition-all">
+                  <a href="https://drive.google.com/file/d/1N7AI0cxkeV_YpPL60nKdPpHEnKtWXN-B/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex items-center gap-2 font-semibold text-[hsl(var(--col-primary))] hover:gap-3 transition-all">
                     Learn more <ArrowRight className="w-4 h-4" />
                   </a>
                 )}
@@ -279,62 +332,7 @@ export default function LandingPage({ onGetStarted, onChat }) {
         </div>
       </section>
 
-      {/* ══ REVENUE MODELS ══ */}
-      <section className="py-24 px-6 bg-[hsl(var(--col-bg))] relative overflow-hidden border-b border-[hsl(var(--col-border))]">
-        {/* Architecture network background */}
-        <div className="absolute inset-0 z-0 pointer-events-none opacity-30">
-          <svg className="w-full h-full" viewBox="0 0 1400 700" preserveAspectRatio="xMidYMid slice">
-            <circle cx="100" cy="100" r="6" fill="hsl(var(--col-accent))" opacity="0.7" />
-            <circle cx="700" cy="160" r="10" fill="hsl(var(--col-accent))" opacity="0.7" />
-            <circle cx="1300" cy="80" r="6" fill="hsl(var(--col-accent))" opacity="0.7" />
-            <path d="M 100 100 L 700 160 L 1300 80" stroke="hsl(var(--col-accent))" strokeWidth="1" opacity="0.3" fill="none" />
-            <motion.path d="M 100 100 L 700 160 L 1300 80" stroke="hsl(var(--col-accent))" strokeWidth="2.5" fill="none"
-              strokeDasharray="30 500" animate={{ strokeDashoffset: [0, -530] }} transition={{ repeat: Infinity, duration: 5, ease: "linear" }} />
-          </svg>
-        </div>
-
-        <div className="max-w-[1400px] mx-auto relative z-10">
-          <div className="text-center mb-16">
-            <span className="inline-block px-4 py-1.5 bg-[hsl(var(--col-primary)/0.1)] text-[hsl(var(--col-primary))] font-bold text-[12px] uppercase tracking-widest rounded-full mb-6">Pricing & Growth</span>
-            <h2 className="text-[40px] md:text-[48px] font-bold tracking-tight mb-4">Flexible Revenue Models</h2>
-            <p className="text-[18px] text-[hsl(var(--col-muted))] max-w-2xl mx-auto leading-relaxed">Scale your compliance engine dynamically. Choose the subscription model that aligns perfectly with your immediate risk posture and audit timelines.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { name: "Starter", price: "$499", per: "/mo", desc: "Essential SOC 2 foundation for early-stage teams.", features: ["1 Framework (SOC 2)", "5 Cloud Integrations", "Automated Evidence"], btnText: "Start Free", highlight: false },
-              { name: "Pro", price: "$999", per: "/mo", desc: "Multi-framework compliance for growing B2B companies.", features: ["3 Frameworks Included", "Unlimited Integrations", "Security Questionnaires"], btnText: "Go Pro", highlight: true, badge: "Most Popular" },
-              { name: "Growth", price: "$2,499", per: "/mo", desc: "Advanced workflows & AI governance for scaleups.", features: ["AI Governance Inference", "Vendor Risk Management", "Continuous Gap Analysis"], btnText: "Select Growth", highlight: false },
-              { name: "Enterprise", price: "Custom", per: "", desc: "Custom deployment and dedicated compliance architects.", features: ["Custom Framework Uploads", "On-Premise Agents", "24/7 Priority Support"], btnText: "Contact Sales", highlight: false },
-            ].map((plan, i) => (
-              <div key={i}
-                className={`rounded-3xl p-8 hover:-translate-y-2 transition-all relative overflow-hidden border ${plan.highlight
-                    ? "bg-[hsl(var(--col-primary)/0.15)] border-[hsl(var(--col-primary)/0.4)] shadow-lg shadow-[hsl(var(--col-primary)/0.1)]"
-                    : "bg-[hsl(var(--col-surface))] border-[hsl(var(--col-border))]"
-                  }`}>
-                {plan.badge && (
-                  <div className="absolute top-0 right-0 bg-[hsl(var(--col-accent))] text-white text-[10px] uppercase font-bold tracking-widest px-4 py-1 rounded-bl-xl">{plan.badge}</div>
-                )}
-                <h3 className="text-[24px] font-bold mb-2">{plan.name}</h3>
-                <p className="text-[hsl(var(--col-muted))] text-[14px] mb-6 min-h-[40px]">{plan.desc}</p>
-                <div className={`text-[36px] font-black tracking-tight mb-8 ${plan.highlight ? "text-[hsl(var(--col-primary))]" : ""}`}>
-                  {plan.price}<span className="text-[16px] text-[hsl(var(--col-muted))] font-normal">{plan.per}</span>
-                </div>
-                <ul className="space-y-4 mb-8 text-[14px]">
-                  {plan.features.map((f, j) => (
-                    <li key={j} className="flex items-center gap-3 text-[hsl(var(--col-sub))]">
-                      <CheckCircle className="w-4 h-4 text-[hsl(var(--col-primary))] shrink-0" /> {f}
-                    </li>
-                  ))}
-                </ul>
-                <button className="w-full py-3 rounded-full bg-[hsl(var(--col-primary))] text-white font-bold transition-all hover:opacity-90">
-                  {plan.btnText}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <PricingSection />
 
       {/* ══ ARCHITECTURE / PLATFORM SECTION ══ */}
       <section className="py-24 px-6 bg-[hsl(var(--col-bg))] relative border-b border-[hsl(var(--col-border))]">
@@ -343,9 +341,9 @@ export default function LandingPage({ onGetStarted, onChat }) {
           <h2 className="text-[40px] md:text-[48px] font-bold tracking-tight mb-12">One unified autonomous trust platform.</h2>
 
           <div className="flex flex-wrap justify-center gap-4 mb-20">
-            {["LLM Multi-Agent Evaluator", "Vector Knowledge Base", "Dynamic Policy Extraction", "Continuous Evidence Collection"].map((btn, i) => (
-              <button key={i} className={`font-semibold py-2 px-6 rounded-[8px] border transition-colors ${i === 0 ? "bg-[hsl(var(--col-primary))] text-white border-transparent" : "bg-[hsl(var(--col-surface))] text-[hsl(var(--col-text))] border-[hsl(var(--col-border))] hover:border-[hsl(var(--col-primary)/0.5)]"}`}>
-                {btn}
+            {FEATURES.map((feature, i) => (
+              <button key={i} onClick={() => setActiveFeatureIndex(i)} className={`font-semibold py-2 px-6 rounded-[8px] border transition-colors ${i === activeFeatureIndex ? "bg-[hsl(var(--col-primary))] text-white border-transparent" : "bg-[hsl(var(--col-surface))] text-[hsl(var(--col-text))] border-[hsl(var(--col-border))] hover:border-[hsl(var(--col-primary)/0.5)]"}`}>
+                {feature.title}
               </button>
             ))}
           </div>
@@ -355,8 +353,8 @@ export default function LandingPage({ onGetStarted, onChat }) {
             <div className="flex w-full items-center justify-between relative z-10 px-4">
               {/* Inputs */}
               <div className="flex flex-col gap-10 w-1/4">
-                {[{ icon: FileText, title: "Raw Policies", sub: "PDFs, CSVs", color: "col-primary" }, { icon: Database, title: "Cloud Logs", sub: "AWS, GCP, Azure", color: "col-accent" }].map(({ icon: Icon, title, sub, color }, i) => (
-                  <motion.div key={i} whileHover={{ scale: 1.05, x: 5 }}
+                {activeFeature.inputs.map(({ icon: Icon, title, sub, color }, i) => (
+                  <motion.div key={`${activeFeatureIndex}-input-${i}`} initial={{opacity:0, x:-20}} animate={{opacity:1, x:0}} transition={{delay: i*0.1}} whileHover={{ scale: 1.05, x: 5 }}
                     className="bg-[hsl(var(--col-raise))] p-5 rounded-2xl shadow-sm border border-[hsl(var(--col-border))] flex items-center gap-4 cursor-pointer relative">
                     <div className={`absolute -left-3 inset-y-0 w-1 bg-gradient-to-b from-[hsl(var(--${color}))] to-transparent rounded-full`} />
                     <div className={`w-10 h-10 rounded-full bg-[hsl(var(--${color})/0.1)] flex items-center justify-center shrink-0`}>
@@ -373,25 +371,26 @@ export default function LandingPage({ onGetStarted, onChat }) {
               {/* Processing Core */}
               <div className="w-1/3 relative flex justify-center">
                 <motion.div animate={{ scale: [1, 1.05, 1], opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                  className="absolute inset-0 bg-[hsl(var(--col-primary))] blur-3xl rounded-full" />
-                <div className="relative z-10 p-[2px] rounded-3xl bg-gradient-to-tr from-[hsl(var(--col-primary))] via-[#6aeada] to-[hsl(var(--col-accent))] shadow-[0_8px_40px_rgb(30,171,163,0.3)] group cursor-crosshair">
+                  className={`absolute inset-0 bg-[hsl(var(--${activeFeature.core.color}))] blur-3xl rounded-full transition-colors duration-500`} />
+                <div className={`relative z-10 p-[2px] rounded-3xl bg-gradient-to-tr ${activeFeature.core.glow} shadow-[0_8px_40px_rgb(30,171,163,0.3)] group cursor-crosshair transition-all duration-500`}>
                   <div className="bg-[hsl(var(--col-surface))] p-8 rounded-[22px] flex flex-col items-center justify-center h-[180px] w-[180px] transition-transform duration-500 group-hover:scale-[0.98]">
                     <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                      className="absolute inset-2 border border-dashed border-[hsl(var(--col-primary)/0.3)] rounded-full pointer-events-none" />
-                    <Bot className="w-14 h-14 text-[hsl(var(--col-primary))] mb-4 relative z-10" />
-                    <h4 className="font-bold text-[18px] mb-1 relative z-10">AI Engine</h4>
-                    <span className="text-[10px] text-[hsl(var(--col-accent))] bg-[hsl(var(--col-primary)/0.05)] px-2 py-0.5 rounded-full uppercase font-bold tracking-widest relative z-10">Inference Core</span>
+                      className={`absolute inset-2 border border-dashed border-[hsl(var(--${activeFeature.core.color})/0.3)] rounded-full pointer-events-none`} />
+                    <AnimatePresence mode="wait">
+                      <motion.div key={activeFeatureIndex} initial={{opacity:0, scale:0.5}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.5}} transition={{duration: 0.3}} className="flex flex-col items-center justify-center h-full pt-1">
+                        <activeFeature.core.icon className={`w-14 h-14 text-[hsl(var(--${activeFeature.core.color}))] mb-4 relative z-10`} />
+                        <h4 className="font-bold text-[18px] mb-1 relative z-10 text-center leading-tight mx-[-10px]">{activeFeature.core.title}</h4>
+                        <span className="text-[10px] text-[hsl(var(--col-accent))] bg-[hsl(var(--col-primary)/0.05)] px-2 py-0.5 rounded-full uppercase font-bold tracking-widest relative z-10 whitespace-nowrap mt-1">{activeFeature.core.sub}</span>
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
                 </div>
               </div>
 
               {/* Outputs */}
               <div className="flex flex-col gap-10 w-1/4">
-                {[
-                  { icon: Shield, title: "Compliance State", sub: "100% Passing", subClass: "text-emerald-500 bg-emerald-500/10", color: "col-accent" },
-                  { icon: FileSearch, title: "Gap Analysis", sub: "Actionable Fixes", subClass: "text-[hsl(var(--col-muted))]", color: "col-primary" },
-                ].map(({ icon: Icon, title, sub, subClass, color }, i) => (
-                  <motion.div key={i} whileHover={{ scale: 1.05, x: -5 }}
+                {activeFeature.outputs.map(({ icon: Icon, title, sub, subClass, color }, i) => (
+                  <motion.div key={`${activeFeatureIndex}-output-${i}`} initial={{opacity:0, x:20}} animate={{opacity:1, x:0}} transition={{delay: i*0.1}} whileHover={{ scale: 1.05, x: -5 }}
                     className="bg-[hsl(var(--col-raise))] p-5 rounded-2xl shadow-sm border border-[hsl(var(--col-border))] flex items-center gap-4 cursor-pointer relative">
                     <div className={`absolute -right-3 inset-y-0 w-1 bg-gradient-to-t from-[hsl(var(--${color}))] to-transparent rounded-full`} />
                     <div className={`w-10 h-10 rounded-full bg-[hsl(var(--${color})/0.1)] flex items-center justify-center shrink-0`}>
@@ -429,9 +428,9 @@ export default function LandingPage({ onGetStarted, onChat }) {
             <p className="text-[18px] text-[hsl(var(--col-muted))] leading-relaxed mb-8">
               SOC 2, ISO 27001, HIPAA, GDPR, PCI DSS, and 4+ global standards. Upload any additional regulation or contract — Pramanik translates it into controls automatically.
             </p>
-            <button className="btn-primary py-3.5 px-8 flex items-center gap-2">
+            <a href="https://drive.google.com/file/d/1N7AI0cxkeV_YpPL60nKdPpHEnKtWXN-B/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="btn-primary py-3.5 px-8 inline-flex items-center gap-2 w-fit">
               Learn more <ArrowRight className="w-4 h-4" />
-            </button>
+            </a>
           </div>
 
           <div className="h-[400px] w-full relative mt-20 hidden md:block rounded-2xl border border-[hsl(var(--col-border))] bg-[hsl(var(--col-surface))] shadow-sm overflow-hidden">
@@ -468,6 +467,7 @@ export default function LandingPage({ onGetStarted, onChat }) {
           </div>
         </div>
       </section>
+
       {/* ══ FOOTER ══ */}
       <footer className="relative bg-[hsl(var(--col-surface))] py-14 px-6 overflow-hidden">
 
@@ -487,14 +487,9 @@ export default function LandingPage({ onGetStarted, onChat }) {
         <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row justify-between items-center gap-6 relative z-10">
 
           {/* Brand + tagline */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[hsl(var(--col-primary))] to-[hsl(var(--col-accent))] flex items-center justify-center shadow-[0_0_20px_hsl(var(--col-primary)/0.45)]">
-              <Shield className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <span className="font-bold text-[20px] tracking-tight block leading-none">Pramanik</span>
-              <span className="text-[11px] text-[hsl(var(--col-primary))] font-semibold uppercase tracking-[0.15em]">Autonomous Trust Platform</span>
-            </div>
+          <div className="flex flex-col items-start gap-1">
+            <span className="font-extrabold text-[28px] tracking-tighter text-[#1eaba3] drop-shadow-sm">Pramanik</span>
+            <span className="text-[10px] text-[hsl(var(--col-primary))] font-semibold uppercase tracking-[0.15em] ml-1">Autonomous Trust Platform</span>
           </div>
 
           {/* Status badge */}
