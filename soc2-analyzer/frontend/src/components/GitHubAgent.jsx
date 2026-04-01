@@ -3,11 +3,11 @@ import { Github, Code, Shield, AlertTriangle, FileText, Zap, Check, ChevronDown,
 import { API_URL } from "../config";
 
 const AGENTS = [
-  { id: "code",     name: "Code Agent",      desc: "Scanning source files",          icon: Code,          color: "#4F46E5" },
-  { id: "policy",   name: "Policy Agent",    desc: "Checking documentation",         icon: FileText,      color: "#059669" },
-  { id: "adversary",name: "Adversary Agent", desc: "Challenging findings",           icon: Eye,           color: "#D97706" },
-  { id: "ces",      name: "CES Engine",      desc: "Scoring by compliance impact",   icon: Zap,           color: "#7C3AED" },
-  { id: "reporter", name: "Reporter",        desc: "Compiling report",               icon: Shield,        color: "#DB2777" },
+  { id: "code",       name: "Code Agent",       desc: "Regex + Semgrep scanning source files",   icon: Code,          color: "#4F46E5" },
+  { id: "policy",     name: "Policy Agent",     desc: "Checking security documentation",         icon: FileText,      color: "#059669" },
+  { id: "dependency", name: "Dependency Agent",  desc: "OSV.dev CVE lookup on packages",          icon: Package,       color: "#0891B2" },
+  { id: "adversary",  name: "Adversary Agent",  desc: "AI challenges findings like Big 4 auditor",icon: Eye,          color: "#D97706" },
+  { id: "ces",        name: "CES Engine",       desc: "Scoring by compliance risk velocity",     icon: Zap,           color: "#7C3AED" },
 ];
 
 const SEV = {
@@ -224,6 +224,33 @@ export default function GitHubAgent({ onResults, selectedFrameworks, loading, se
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* LangGraph Agent Trace — shows real decisions from each node */}
+      {results?.agent_trace && results.agent_trace.length > 0 && (
+        <div style={{ ...card, padding: 20, border: "1.5px solid #4F46E520" }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: "#4F46E5", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 14 }}>
+            LangGraph Agent Trace
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {results.agent_trace.map((trace, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px", borderRadius: 10, background: "#F8F7F4" }}>
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#059669", marginTop: 6, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#111827" }}>
+                      {trace.node.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                    </span>
+                    <span style={{ fontSize: 10, color: "#9CA3AF", fontFamily: "monospace" }}>
+                      {trace.duration_ms}ms
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 11, color: "#6B7280", margin: "3px 0 0" }}>{trace.decision}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
