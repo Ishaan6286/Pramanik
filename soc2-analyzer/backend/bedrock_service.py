@@ -33,7 +33,7 @@ def _call_bedrock(prompt: str, max_tokens: int = 2000, temperature: float = 0.3)
 
 def _parse_json(text: str):
     clean = text.replace("```json", "").replace("```", "").strip()
-    return json.loads(clean)
+    return json.loads(clean, strict=False)
 
 
 def generate_explanations(failed_controls: list, company_name: str) -> list:
