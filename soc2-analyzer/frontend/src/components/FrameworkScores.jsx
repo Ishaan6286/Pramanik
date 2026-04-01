@@ -23,6 +23,14 @@ const FRAMEWORKS = [
     bg: "#f9731615",
     description: "US federal law protecting health information and ePHI",
   },
+  {
+    key: "dpdp",
+    label: "DPDP Act",
+    subtitle: "India 2023",
+    color: "#ec4899",
+    bg: "#ec489915",
+    description: "India's Digital Personal Data Protection Act — consent, breach notification, data principal rights",
+  },
 ];
 
 function ScoreRing({ score, color, size = 80 }) {
@@ -54,12 +62,12 @@ export default function FrameworkScores({ frameworkScores }) {
       <div>
         <h3 className="font-semibold">Multi-Framework Coverage</h3>
         <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>
-          One scan, three compliance frameworks. Each control maps to SOC 2, ISO 27001, and HIPAA simultaneously.
+          One scan, four compliance frameworks. Each control maps to SOC 2, ISO 27001, HIPAA, and India's DPDP Act simultaneously.
         </p>
       </div>
 
       {/* Score cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {FRAMEWORKS.map((fw) => {
           const data = frameworkScores[fw.key];
           if (!data) return null;
@@ -125,10 +133,10 @@ export default function FrameworkScores({ frameworkScores }) {
       >
         <h4 className="font-semibold mb-1">Why Multi-Framework Matters</h4>
         <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-          Most compliance tools check one framework at a time. Our CRVS algorithm identifies controls that satisfy
+          Most compliance tools check one framework at a time. Our CES algorithm identifies controls that satisfy
           multiple frameworks simultaneously — fixing MFA alone satisfies <strong>SOC 2 CC6.1</strong>,{" "}
-          <strong>ISO 27001 A.9.4.2</strong>, and <strong>HIPAA §164.312(d)</strong> at once. This lets you get
-          compliant faster, with less effort.
+          <strong>ISO 27001 A.9.4.2</strong>, <strong>HIPAA §164.312(d)</strong>, and{" "}
+          <strong>DPDP §8(1)</strong> at once. One fix, four frameworks.
         </p>
         <div className="flex gap-6 mt-3">
           {FRAMEWORKS.map((fw) => {
