@@ -1,10 +1,26 @@
 const Groq = require('groq-sdk');
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY
-});
+let groq = null;
+function getGroqClient() {
+  if (!process.env.GROQ_API_KEY) {
+    throw new Error('GROQ_API_KEY is not set. Add it to backend/.env to enable AI features.');
+  }
+  if (!groq) {
+    groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  }
+  return groq;
+}
 
 async function generateExplanations(failedControls, companyName) {
+  if (!process.env.GROQ_API_KEY) {
+    return failedControls.map(c => ({
+      control_id: c.id,
+      risk_explanation: "AI explanation disabled: Add GROQ_API_KEY to .env to see detailed risk info.",
+      fix_steps: ["Configure GROQ_API_KEY in backend/.env", "Restart the backend server"],
+      business_impact: "Potential security vulnerabilities might not be fully understood without detailed AI explanations."
+    }));
+  }
+
   const failedSummary = failedControls.map(c =>
     `Control ${c.id} (${c.title}): ${c.issues.join('; ')}`
   ).join('\n');
@@ -31,7 +47,7 @@ Format your response as a JSON array like this:
 
 Return ONLY the JSON array, no other text.`;
 
-  const response = await groq.chat.completions.create({
+  const response = await getGroqClient().chat.completions.create({
     model: "llama-3.3-70b-versatile",
     messages: [{ role: "user", content: prompt }],
     temperature: 0.3,
@@ -44,6 +60,25 @@ Return ONLY the JSON array, no other text.`;
 }
 
 async function generatePolicies(awsConfig, companyName) {
+  if (!process.env.GROQ_API_KEY) {
+    return {
+      policies: [
+        {
+          title: "Access Control Policy",
+          content: "AI generation disabled. Please add a GROQ_API_KEY to your backend/.env file to generate professional, audit-ready policies customized for your AWS infrastructure."
+        },
+        {
+          title: "Data Encryption Policy",
+          content: "AI generation disabled. Please add a GROQ_API_KEY to your backend/.env file to generate this policy."
+        },
+        {
+          title: "Incident Response Policy",
+          content: "AI generation disabled. Please add a GROQ_API_KEY to your backend/.env file to generate this policy."
+        }
+      ]
+    };
+  }
+
   const prompt = `You are a compliance expert. Write 3 professional SOC 2 policy documents for "${companyName}", an Indian SaaS startup using AWS.
 
 Write these exact 3 policies:
@@ -78,7 +113,7 @@ Format as JSON:
 
 Return ONLY the JSON, no other text.`;
 
-  const response = await groq.chat.completions.create({
+  const response = await getGroqClient().chat.completions.create({
     model: "llama-3.3-70b-versatile",
     messages: [{ role: "user", content: prompt }],
     temperature: 0.4,
