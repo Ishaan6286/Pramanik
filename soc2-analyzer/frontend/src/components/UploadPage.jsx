@@ -13,7 +13,7 @@ const AVAILABLE_FRAMEWORKS = [
     key: "soc2",
     label: "SOC 2",
     subtitle: "AICPA Trust Services Criteria",
-    color: "hsl(180, 35%, 52%)", // Pastel aqua
+    color: "hsl(168, 46%, 35%)",
     controls: 33,
     popular: true,
   },
@@ -21,7 +21,7 @@ const AVAILABLE_FRAMEWORKS = [
     key: "iso27001",
     label: "ISO 27001",
     subtitle: "Information Security Management",
-    color: "hsl(150, 28%, 50%)", // Pastel green
+    color: "hsl(152, 36%, 40%)",
     controls: 31,
     popular: true,
   },
@@ -29,7 +29,7 @@ const AVAILABLE_FRAMEWORKS = [
     key: "hipaa",
     label: "HIPAA",
     subtitle: "Health Information Protection",
-    color: "hsl(28, 55%, 58%)", // Pastel amber
+    color: "hsl(28, 45%, 52%)",
     controls: 28,
     popular: false,
   },
@@ -37,14 +37,14 @@ const AVAILABLE_FRAMEWORKS = [
     key: "dpdp",
     label: "DPDP Act 2023",
     subtitle: "India Data Protection",
-    color: "hsl(330, 32%, 62%)", // Pastel rose
+    color: "hsl(330, 28%, 56%)",
     controls: 15,
     popular: true,
   },
 ];
 
 const fadeUp = {
-  hidden:  { opacity: 0, y: 15 },
+  hidden:  { opacity: 0, y: 12 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.2, 0, 0, 1] } }
 };
 
@@ -110,7 +110,6 @@ export default function UploadPage({ onAnalysis, onBack, loading, setLoading, us
     setScanStep(0);
     setError(null);
 
-    // Simulate progress while API is hitting
     let progressTimer = setInterval(() => {
        setScanStep(prev => (prev < steps.length - 1 ? prev + 1 : prev));
     }, 1500);
@@ -189,36 +188,37 @@ export default function UploadPage({ onAnalysis, onBack, loading, setLoading, us
   };
 
   return (
-    <div className="min-h-screen relative bg-[hsl(var(--col-bg))] text-[hsl(var(--col-text))] overflow-hidden selection:bg-[hsl(var(--col-primary)/0.12)] font-display">
+    <div className="min-h-screen relative bg-[hsl(var(--col-bg))] text-[hsl(var(--col-text))] overflow-hidden font-display">
       
-      {/* ── Ambient Pattern ── */}
-      <div className="absolute inset-0 z-0 bg-pattern-plus opacity-[0.18] pointer-events-none" />
+      {/* ── Ambient Pattern — lighter ── */}
+      <div className="absolute inset-0 z-0 bg-pattern-dots opacity-[0.10] pointer-events-none" />
 
       {/* ── TOP NAV ── */}
-      <header className="relative z-50 max-w-[1400px] mx-auto px-8 h-16 flex items-center justify-between border-b border-[hsl(var(--col-border))] bg-[hsl(var(--col-bg)/0.8)] backdrop-blur-md">
-        <div className="flex items-center">
-          <span className="font-extrabold text-[24px] tracking-tighter text-[#1eaba3] drop-shadow-sm">Pramanik</span>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <ThemeToggle />
-          <button onClick={onBack} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-[hsl(var(--col-primary)/0.05)] text-[hsl(var(--col-muted))] hover:text-[hsl(var(--col-primary))] transition-all">
-             <X className="w-5 h-5" />
-          </button>
+      <header className="relative z-50 border-b border-[hsl(var(--col-border))] bg-[hsl(var(--col-bg)/0.85)] backdrop-blur-md">
+        <div className="max-w-[1400px] mx-auto px-8 h-14 flex items-center justify-between">
+          <div className="flex items-center">
+            <span className="font-extrabold text-[22px] tracking-tight text-[hsl(var(--col-primary))]">Pramanik</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[hsl(var(--col-primary)/0.06)] text-[hsl(var(--col-muted))] hover:text-[hsl(var(--col-primary))] transition-all">
+               <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </header>
 
       {/* ── MAIN WORKSPACE ── */}
-      <main className="relative z-10 max-w-5xl mx-auto min-h-[calc(100vh-64px)] flex flex-col items-center py-16 px-6">
+      <main className="relative z-10 max-w-5xl mx-auto min-h-[calc(100vh-56px)] flex flex-col items-center py-14 px-6">
         
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} className="text-center mb-12">
-          <span className="inline-block px-3 py-1 bg-[hsl(var(--col-primary)/0.08)] text-[hsl(var(--col-primary))] font-bold text-[11px] uppercase tracking-widest rounded-full mb-4 border border-[hsl(var(--col-primary)/0.12)]">
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} className="text-center mb-10">
+          <span className="badge mb-4">
             Autonomous Ingestion
           </span>
-          <h1 className="text-[36px] font-bold tracking-tight mb-3">
+          <h1 className="text-[30px] font-bold tracking-tight mt-3 mb-2">
              Architecture Ingestion
           </h1>
-          <p className="text-[16px] text-[hsl(var(--col-muted))] font-medium">
+          <p className="text-[15px] text-[hsl(var(--col-muted))] font-normal">
              Select target frameworks and scan your infrastructure for trust compliance.
           </p>
         </motion.div>
@@ -226,88 +226,71 @@ export default function UploadPage({ onAnalysis, onBack, loading, setLoading, us
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 w-full">
            
            {/* LEFT COLUMN: Frameworks & Modes */}
-           <motion.div variants={fadeUp} initial="hidden" animate="visible" className="lg:col-span-4 space-y-8">
+           <motion.div variants={fadeUp} initial="hidden" animate="visible" className="lg:col-span-4 space-y-6">
               
               {/* Framework Selector */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                  <div className="flex items-center justify-between px-1">
-                    <h3 className="text-[13px] font-black uppercase tracking-widest text-[hsl(var(--col-muted))]">Target Frameworks</h3>
-                    <span className="text-[11px] font-bold text-[hsl(var(--col-primary))]">{selectedFrameworks.length} selected</span>
+                    <h3 className="text-[12px] font-bold uppercase tracking-widest text-[hsl(var(--col-muted))]">Target Frameworks</h3>
+                    <span className="text-[11px] font-semibold text-[hsl(var(--col-primary))]">{selectedFrameworks.length} selected</span>
                  </div>
-                 <div className="grid grid-cols-1 gap-3">
+                 <div className="grid grid-cols-1 gap-2.5">
                     {AVAILABLE_FRAMEWORKS.map((fw) => {
                       const selected = selectedFrameworks.includes(fw.key);
                       return (
                         <button
                           key={fw.key}
                           onClick={() => toggleFramework(fw.key)}
-                          className={`relative p-4 rounded-2xl text-left border transition-all group overflow-hidden ${selected ? 'bg-[hsl(var(--col-raise))] border-[hsl(var(--col-primary)/0.35)] shadow-sm' : 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-border))] hover:bg-[hsl(var(--col-raise))] hover:border-[hsl(var(--col-primary)/0.22)]'}`}
+                          className={`relative p-4 rounded-xl text-left border transition-all overflow-hidden ${selected ? 'bg-[hsl(var(--col-raise))] border-[hsl(var(--col-primary)/0.35)] shadow-[0_2px_8px_rgba(0,0,0,0.04)]' : 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-border))] hover:bg-[hsl(var(--col-raise))] hover:border-[hsl(var(--col-primary)/0.20)]'}`}
                         >
                           <div className="flex items-center gap-3 mb-1">
-                             <div className="w-6 h-6 rounded-full flex items-center justify-center border border-[hsl(var(--col-border))]" style={{ backgroundColor: selected ? fw.color : 'transparent', color: selected ? 'rgba(255,255,255,0.95)' : 'transparent' }}>
+                             <div className="w-5 h-5 rounded-md flex items-center justify-center border border-[hsl(var(--col-border))]" style={{ backgroundColor: selected ? fw.color : 'transparent', color: selected ? 'rgba(255,255,255,0.95)' : 'transparent' }}>
                                 <Check className="w-3 h-3" />
                              </div>
-                             <span className="font-bold text-[15px]">{fw.label}</span>
+                             <span className="font-semibold text-[14px]">{fw.label}</span>
                           </div>
-                          <p className="text-[12px] text-[hsl(var(--col-muted))] font-medium leading-tight">
+                          <p className="text-[12px] text-[hsl(var(--col-muted))] leading-tight ml-8">
                              {fw.subtitle}
                           </p>
                           {fw.popular && !selected && (
-                             <span className="absolute top-4 right-4 text-[9px] font-bold uppercase tracking-tighter bg-[hsl(var(--col-accent)/0.08)] text-[hsl(var(--col-accent))] px-1.5 py-0.5 rounded border border-[hsl(var(--col-accent)/0.12)]">Popular</span>
+                             <span className="absolute top-3.5 right-3.5 text-[9px] font-bold uppercase tracking-tight bg-[hsl(var(--col-accent)/0.08)] text-[hsl(var(--col-accent))] px-1.5 py-0.5 rounded border border-[hsl(var(--col-accent)/0.14)]">Popular</span>
                           )}
                         </button>
                       );
                     })}
                  </div>
               </div>
-
-              {/* Ingestion method selector moved to right column */}
            </motion.div>
 
            {/* RIGHT COLUMN: Action Zone */}
            <motion.div variants={fadeUp} initial="hidden" animate="visible" className="lg:col-span-8 flex flex-col items-center">
              
               {/* Ingestion Method (horizontal) */}
-              <div className="w-full mb-6">
+              <div className="w-full mb-5">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-[13px] font-black uppercase tracking-widest text-[hsl(var(--col-muted))] px-1">
+                  <h3 className="text-[12px] font-bold uppercase tracking-widest text-[hsl(var(--col-muted))] px-1">
                     Ingestion Method
                   </h3>
                 </div>
 
                 <div className="w-full flex items-center gap-2">
-                  <button
-                    onClick={() => setMode("upload")}
-                    className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-[14px] font-bold border transition-all focus:outline-none focus:ring-4 focus:ring-[hsl(var(--col-primary))/0.10]
-                      ${mode === "upload"
-                        ? 'bg-[hsl(var(--col-primary)/0.07)] border-[hsl(var(--col-primary)/0.25)] text-[hsl(var(--col-primary))]'
-                        : 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-border))] text-[hsl(var(--col-muted))] hover:bg-[hsl(var(--col-raise))] hover:border-[hsl(var(--col-primary)/0.18)]'}`}
-                  >
-                    <UploadCloud className="w-4 h-4" />
-                    Local Config
-                  </button>
-
-                  <button
-                    onClick={() => setMode("aws")}
-                    className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-[14px] font-bold border transition-all focus:outline-none focus:ring-4 focus:ring-[hsl(var(--col-primary))/0.10]
-                      ${mode === "aws"
-                        ? 'bg-[hsl(var(--col-primary)/0.07)] border-[hsl(var(--col-primary)/0.25)] text-[hsl(var(--col-primary))]'
-                        : 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-border))] text-[hsl(var(--col-muted))] hover:bg-[hsl(var(--col-raise))] hover:border-[hsl(var(--col-primary)/0.18)]'}`}
-                  >
-                    <Cloud className="w-4 h-4" />
-                    Connect AWS
-                  </button>
-
-                  <button
-                    onClick={() => setMode("github")}
-                    className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-[14px] font-bold border transition-all focus:outline-none focus:ring-4 focus:ring-[hsl(var(--col-primary))/0.10]
-                      ${mode === "github"
-                        ? 'bg-[hsl(var(--col-primary)/0.07)] border-[hsl(var(--col-primary)/0.25)] text-[hsl(var(--col-primary))]'
-                        : 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-border))] text-[hsl(var(--col-muted))] hover:bg-[hsl(var(--col-raise))] hover:border-[hsl(var(--col-primary)/0.18)]'}`}
-                  >
-                    <Github className="w-4 h-4" />
-                    Scan GitHub
-                  </button>
+                  {[
+                    { id: "upload", label: "Local Config", icon: UploadCloud },
+                    { id: "aws",    label: "Connect AWS",  icon: Cloud },
+                    { id: "github", label: "Scan GitHub",  icon: Github },
+                  ].map(({ id, label, icon: Icon }) => (
+                    <button
+                      key={id}
+                      onClick={() => setMode(id)}
+                      className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-[10px] text-[13px] font-semibold border transition-all focus:outline-none
+                        ${mode === id
+                          ? 'bg-[hsl(var(--col-primary)/0.08)] border-[hsl(var(--col-primary)/0.28)] text-[hsl(var(--col-primary))]'
+                          : 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-border))] text-[hsl(var(--col-muted))] hover:bg-[hsl(var(--col-raise))] hover:border-[hsl(var(--col-primary)/0.18)] hover:text-[hsl(var(--col-text))]'}`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {label}
+                    </button>
+                  ))}
                 </div>
               </div>
               
@@ -320,43 +303,43 @@ export default function UploadPage({ onAnalysis, onBack, loading, setLoading, us
 
               {/* AWS Connect View */}
               {mode === "aws" && (
-                <div className="w-full space-y-6">
-                  <div className="surface-raise p-10 rounded-[32px] bg-[hsl(var(--col-surface))] border border-[hsl(var(--col-border))] space-y-6">
-                    <div className="flex items-center gap-4 mb-4">
-                       <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center">
-                          <Cloud className="w-6 h-6 text-amber-500" />
+                <div className="w-full space-y-5">
+                  <div className="surface-raise p-8 rounded-2xl bg-[hsl(var(--col-surface))] border border-[hsl(var(--col-border))] space-y-5">
+                    <div className="flex items-center gap-4 mb-2">
+                       <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center shrink-0">
+                          <Cloud className="w-5 h-5 text-amber-500" />
                        </div>
                        <div>
-                          <h3 className="text-[18px] font-bold">AWS Account Bridge</h3>
-                          <p className="text-[13px] text-[hsl(var(--col-muted))] font-medium">Read-only scanner for IAM, Networking, and S3 posture</p>
+                          <h3 className="text-[17px] font-bold tracking-tight">AWS Account Bridge</h3>
+                          <p className="text-[12px] text-[hsl(var(--col-muted))] font-medium">Read-only scanner for IAM, Networking, and S3 posture</p>
                        </div>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold uppercase tracking-widest text-[hsl(var(--col-muted))] ml-1">Access Key ID</label>
+                        <label className="text-[11px] font-semibold uppercase tracking-widest text-[hsl(var(--col-muted))]">Access Key ID</label>
                         <div className="relative">
-                          <Key className="absolute left-4 top-3.5 w-4 h-4 text-[hsl(var(--col-muted))]" />
-                          <input type="text" placeholder="AKIA..." value={awsCreds.access_key} onChange={(e) => setAwsCreds({ ...awsCreds, access_key: e.target.value })} className="w-full pl-11 pr-4 py-3 rounded-xl bg-[hsl(var(--col-bg))] border border-[hsl(var(--col-border))] text-[14px] font-mono focus:ring-2 focus:ring-[hsl(var(--col-primary))/0.2] transition-all" />
+                          <Key className="absolute left-3.5 top-3 w-4 h-4 text-[hsl(var(--col-muted))]" />
+                          <input type="text" placeholder="AKIA..." value={awsCreds.access_key} onChange={(e) => setAwsCreds({ ...awsCreds, access_key: e.target.value })} className="w-full pl-10 pr-4 py-2.5 rounded-[10px] bg-[hsl(var(--col-bg))] border border-[hsl(var(--col-border))] text-[13px] font-mono focus:ring-2 focus:ring-[hsl(var(--col-primary)/0.18)] focus:outline-none transition-all" />
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold uppercase tracking-widest text-[hsl(var(--col-muted))] ml-1">Secret Access Key</label>
+                        <label className="text-[11px] font-semibold uppercase tracking-widest text-[hsl(var(--col-muted))]">Secret Access Key</label>
                         <div className="relative">
-                          <Lock className="absolute left-4 top-3.5 w-4 h-4 text-[hsl(var(--col-muted))]" />
-                          <input type="password" placeholder="••••••••••••" value={awsCreds.secret_key} onChange={(e) => setAwsCreds({ ...awsCreds, secret_key: e.target.value })} className="w-full pl-11 pr-4 py-3 rounded-xl bg-[hsl(var(--col-bg))] border border-[hsl(var(--col-border))] text-[14px] font-mono focus:ring-2 focus:ring-[hsl(var(--col-primary))/0.2] transition-all" />
+                          <Lock className="absolute left-3.5 top-3 w-4 h-4 text-[hsl(var(--col-muted))]" />
+                          <input type="password" placeholder="••••••••••••" value={awsCreds.secret_key} onChange={(e) => setAwsCreds({ ...awsCreds, secret_key: e.target.value })} className="w-full pl-10 pr-4 py-2.5 rounded-[10px] bg-[hsl(var(--col-bg))] border border-[hsl(var(--col-border))] text-[13px] font-mono focus:ring-2 focus:ring-[hsl(var(--col-primary)/0.18)] focus:outline-none transition-all" />
                         </div>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold uppercase tracking-widest text-[hsl(var(--col-muted))] ml-1">Account Label</label>
-                        <input type="text" placeholder="Production / Staging" value={awsCreds.company_name} onChange={(e) => setAwsCreds({ ...awsCreds, company_name: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-[hsl(var(--col-bg))] border border-[hsl(var(--col-border))] text-[14px]" />
+                        <label className="text-[11px] font-semibold uppercase tracking-widest text-[hsl(var(--col-muted))]">Account Label</label>
+                        <input type="text" placeholder="Production / Staging" value={awsCreds.company_name} onChange={(e) => setAwsCreds({ ...awsCreds, company_name: e.target.value })} className="w-full px-3.5 py-2.5 rounded-[10px] bg-[hsl(var(--col-bg))] border border-[hsl(var(--col-border))] text-[13px] focus:ring-2 focus:ring-[hsl(var(--col-primary)/0.18)] focus:outline-none transition-all" />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold uppercase tracking-widest text-[hsl(var(--col-muted))] ml-1">Primary Region</label>
-                        <select value={awsCreds.region} onChange={(e) => setAwsCreds({ ...awsCreds, region: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-[hsl(var(--col-bg))] border border-[hsl(var(--col-border))] text-[14px]">
+                        <label className="text-[11px] font-semibold uppercase tracking-widest text-[hsl(var(--col-muted))]">Primary Region</label>
+                        <select value={awsCreds.region} onChange={(e) => setAwsCreds({ ...awsCreds, region: e.target.value })} className="w-full px-3.5 py-2.5 rounded-[10px] bg-[hsl(var(--col-bg))] border border-[hsl(var(--col-border))] text-[13px] focus:ring-2 focus:ring-[hsl(var(--col-primary)/0.18)] focus:outline-none transition-all">
                           <option value="ap-south-1">Mumbai (ap-south-1)</option>
                           <option value="us-east-1">N. Virginia (us-east-1)</option>
                           <option value="eu-west-1">Ireland (eu-west-1)</option>
@@ -364,8 +347,8 @@ export default function UploadPage({ onAnalysis, onBack, loading, setLoading, us
                       </div>
                     </div>
 
-                    <div className="pt-4 flex flex-col items-center">
-                       <button onClick={handleAWSScan} disabled={scanning} className="btn-primary w-full max-w-[320px] py-4 text-[16px] flex justify-center">
+                    <div className="pt-2 flex flex-col items-center">
+                       <button onClick={handleAWSScan} disabled={scanning} className="btn-solid w-full max-w-[280px] py-3 text-[14px] flex justify-center">
                           {scanning ? 'Connecting Account...' : 'Initiate AWS Audit'}
                        </button>
                     </div>
@@ -375,37 +358,37 @@ export default function UploadPage({ onAnalysis, onBack, loading, setLoading, us
 
               {/* Upload View */}
               {mode === "upload" && (
-                <div className="w-full space-y-8">
+                <div className="w-full space-y-6">
                   <motion.div
                     onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
-                    className={`relative w-full rounded-[32px] transition-all duration-500 overflow-hidden cursor-pointer flex flex-col items-center justify-center p-20 border-2 border-dashed
+                    className={`relative w-full rounded-2xl transition-all duration-300 overflow-hidden cursor-pointer flex flex-col items-center justify-center p-14 border-2 border-dashed
                       ${file 
-                        ? 'bg-[hsl(var(--col-raise))] border-[hsl(var(--col-primary))] shadow-sm' 
+                        ? 'bg-[hsl(var(--col-raise))] border-[hsl(var(--col-primary)/0.45)]' 
                         : isDragActive 
-                          ? 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-primary))] ring-8 ring-[hsl(var(--col-primary)/0.05)]' 
-                          : 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-border))] hover:border-[hsl(var(--col-primary)/0.3)] hover:bg-[hsl(var(--col-raise))]'}`}
+                          ? 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-primary)/0.5)] ring-4 ring-[hsl(var(--col-primary)/0.06)]' 
+                          : 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-border))] hover:border-[hsl(var(--col-primary)/0.28)] hover:bg-[hsl(var(--col-raise))]'}`}
                     onClick={() => !file && fileRef.current.click()}
                   >
                     <input type="file" ref={fileRef} hidden accept=".json" onChange={e => handleDrop({ preventDefault:()=>{}, stopPropagation:()=>{}, dataTransfer:{files:e.target.files} })} />
 
                     <AnimatePresence mode="wait">
                       {!file ? (
-                        <motion.div key="empty" initial={{ opacity:0, scale:0.95 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0 }} className="flex flex-col items-center text-center">
-                          <div className="w-16 h-16 rounded-2xl bg-[hsl(var(--col-primary)/0.05)] border border-[hsl(var(--col-primary)/0.1)] flex items-center justify-center mb-6">
-                             <UploadCloud className="w-7 h-7 text-[hsl(var(--col-primary))]" />
+                        <motion.div key="empty" initial={{ opacity:0, scale:0.97 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0 }} className="flex flex-col items-center text-center">
+                          <div className="w-14 h-14 rounded-xl bg-[hsl(var(--col-primary)/0.06)] border border-[hsl(var(--col-primary)/0.12)] flex items-center justify-center mb-5">
+                             <UploadCloud className="w-6 h-6 text-[hsl(var(--col-primary))]" />
                           </div>
-                          <p className="font-bold text-[18px] mb-1">Click to upload manifest</p>
-                          <p className="text-[14px] text-[hsl(var(--col-muted))] font-medium italic">Supports AWS, GCP, and Azure JSON exports</p>
+                          <p className="font-semibold text-[17px] mb-1 tracking-tight">Click to upload manifest</p>
+                          <p className="text-[13px] text-[hsl(var(--col-muted))] font-normal">Supports AWS, GCP, and Azure JSON exports</p>
                         </motion.div>
                       ) : (
-                        <motion.div key="file" initial={{ opacity:0, scale:0.95 }} animate={{ opacity:1, scale:1 }} className="flex flex-col items-center text-center w-full z-10">
-                          <div className="w-20 h-20 rounded-3xl bg-[hsl(var(--col-primary)/0.1)] flex items-center justify-center mb-6 border border-[hsl(var(--col-primary)/0.2)]">
-                            <FileJson className="w-8 h-8 text-[hsl(var(--col-primary))]" />
+                        <motion.div key="file" initial={{ opacity:0, scale:0.97 }} animate={{ opacity:1, scale:1 }} className="flex flex-col items-center text-center w-full z-10">
+                          <div className="w-16 h-16 rounded-2xl bg-[hsl(var(--col-primary)/0.08)] flex items-center justify-center mb-5 border border-[hsl(var(--col-primary)/0.18)]">
+                            <FileJson className="w-7 h-7 text-[hsl(var(--col-primary))]" />
                           </div>
-                          <h3 className="font-bold text-[20px] truncate max-w-[400px] text-[hsl(var(--col-text))] tracking-tight">{file.name}</h3>
-                          <p className="text-[13px] font-bold text-[hsl(var(--col-muted))] mt-3 uppercase tracking-widest opacity-60">Ready for autonomous audit</p>
+                          <h3 className="font-bold text-[18px] truncate max-w-[380px] text-[hsl(var(--col-text))] tracking-tight">{file.name}</h3>
+                          <p className="text-[12px] font-medium text-[hsl(var(--col-muted))] mt-2 uppercase tracking-widest opacity-60">Ready for autonomous audit</p>
                           
-                          <button onClick={(e) => { e.stopPropagation(); setFile(null); }} className="mt-10 text-[13px] font-bold text-[hsl(var(--col-muted))] hover:text-red-500 transition-all underline underline-offset-4">
+                          <button onClick={(e) => { e.stopPropagation(); setFile(null); }} className="mt-8 text-[12px] font-medium text-[hsl(var(--col-muted))] hover:text-red-500 transition-all underline underline-offset-4">
                             Discard file
                           </button>
                         </motion.div>
@@ -417,13 +400,13 @@ export default function UploadPage({ onAnalysis, onBack, loading, setLoading, us
                     <AnimatePresence>
                       {file && (
                         <motion.button 
-                          initial={{ opacity:0, y:15 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-10 }}
+                          initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-8 }}
                           onClick={handleStartAnalysis}
                           disabled={scanning}
-                          className="btn-primary w-full max-w-[320px] group flex justify-center py-4 text-[16px]"
+                          className="btn-solid w-full max-w-[280px] group flex justify-center py-3 text-[14px]"
                         >
                           {scanning ? 'Initializing Analysis...' : 'Run Autonomous Audit'}
-                          {!scanning && <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />}
+                          {!scanning && <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-0.5" />}
                         </motion.button>
                       )}
                     </AnimatePresence>
@@ -432,21 +415,21 @@ export default function UploadPage({ onAnalysis, onBack, loading, setLoading, us
               )}
 
               {error && mode !== "github" && (
-                 <div className="mt-8 flex items-center gap-3 text-red-500 bg-red-50/50 border border-red-100 px-6 py-4 rounded-3xl w-full">
-                    <X className="w-5 h-5 flex-shrink-0" />
-                    <p className="text-[14px] font-medium">{error}</p>
+                 <div className="mt-6 flex items-center gap-3 text-red-500 bg-red-50/60 border border-red-100 px-5 py-3.5 rounded-xl w-full">
+                    <X className="w-4 h-4 flex-shrink-0" />
+                    <p className="text-[13px] font-medium">{error}</p>
                  </div>
               )}
 
               {mode !== "github" && (
-                 <div className="flex items-center justify-center gap-10 mt-12 bg-white/40 border border-[hsl(var(--col-border))] px-8 py-3 rounded-full">
-                   <div className="flex items-center gap-2.5 text-[12px] text-[hsl(var(--col-muted))] font-bold uppercase tracking-widest">
-                     <Shield className="w-4 h-4 text-[hsl(var(--col-primary))]" />
+                 <div className="flex items-center justify-center gap-6 mt-10 bg-[hsl(var(--col-surface))] border border-[hsl(var(--col-border))] px-6 py-2.5 rounded-full">
+                   <div className="flex items-center gap-2 text-[11px] text-[hsl(var(--col-muted))] font-medium uppercase tracking-widest">
+                     <Shield className="w-3.5 h-3.5 text-[hsl(var(--col-primary))]" />
                      Secure
                    </div>
-                   <div className="w-px h-4 bg-[hsl(var(--col-border))]" />
-                   <div className="flex items-center gap-2.5 text-[12px] text-[hsl(var(--col-muted))] font-bold uppercase tracking-widest">
-                     <Lock className="w-4 h-4 text-[hsl(var(--col-primary))]" />
+                   <div className="w-px h-3.5 bg-[hsl(var(--col-border))]" />
+                   <div className="flex items-center gap-2 text-[11px] text-[hsl(var(--col-muted))] font-medium uppercase tracking-widest">
+                     <Lock className="w-3.5 h-3.5 text-[hsl(var(--col-primary))]" />
                      Private
                    </div>
                  </div>
@@ -454,7 +437,7 @@ export default function UploadPage({ onAnalysis, onBack, loading, setLoading, us
            </motion.div>
         </div>
 
-        {/* GitHub Results Bottom Row Portals (forces vertical alignment) */}
+        {/* GitHub Results Bottom Row Portals */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 w-full mt-6 empty:hidden">
            <div className="lg:col-span-4" id="github-bottom-left"></div>
            <div className="lg:col-span-8" id="github-bottom-right"></div>
@@ -466,39 +449,39 @@ export default function UploadPage({ onAnalysis, onBack, loading, setLoading, us
         {scanning && (
           <motion.div 
             initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
-            className="fixed inset-0 z-[100] bg-white/90 backdrop-blur-xl flex flex-col items-center justify-center p-6"
+            className="fixed inset-0 z-[100] bg-[hsl(var(--col-bg)/0.94)] backdrop-blur-xl flex flex-col items-center justify-center p-6"
           >
-            <div className="max-w-[480px] w-full flex flex-col items-center text-center">
-               <div className="w-20 h-20 bg-gradient-to-br from-[hsl(var(--col-primary))] to-[hsl(var(--col-accent))] rounded-3xl flex items-center justify-center mb-10 shadow-2xl shadow-[hsl(var(--col-primary)/0.3)] animate-pulse">
-                  <RefreshCw className="w-8 h-8 text-white animate-spin-slow" />
+            <div className="max-w-[440px] w-full flex flex-col items-center text-center">
+               <div className="w-16 h-16 bg-gradient-to-br from-[hsl(var(--col-primary))] to-[hsl(var(--col-accent))] rounded-2xl flex items-center justify-center mb-8 shadow-[0_8px_32px_hsl(var(--col-primary)/0.25)]">
+                  <RefreshCw className="w-7 h-7 text-white animate-spin-slow" />
                </div>
 
-               <div className="w-full space-y-6 mb-10">
-                  <div className="flex justify-between items-end mb-3">
-                     <p className="text-[14px] font-bold text-[hsl(var(--col-muted))] uppercase tracking-widest">Post-Processing Matrix</p>
-                     <p className="text-[18px] font-black text-[hsl(var(--col-primary))]">
+               <div className="w-full space-y-4 mb-8">
+                  <div className="flex justify-between items-end mb-2">
+                     <p className="text-[12px] font-semibold text-[hsl(var(--col-muted))] uppercase tracking-widest">Processing</p>
+                     <p className="text-[18px] font-bold text-[hsl(var(--col-primary))]">
                         {Math.round(((scanStep + 1) / (steps.length + 1)) * 100)}%
                      </p>
                   </div>
-                  <div className="h-2 w-full bg-[hsl(var(--col-border))] rounded-full overflow-hidden">
+                  <div className="h-1.5 w-full bg-[hsl(var(--col-border))] rounded-full overflow-hidden">
                     <motion.div 
-                      className="h-full bg-gradient-to-r from-[hsl(var(--col-primary))] to-[hsl(var(--col-accent))]" 
+                      className="h-full bg-gradient-to-r from-[hsl(var(--col-primary))] to-[hsl(var(--col-accent))] rounded-full" 
                       initial={{ width: 0 }}
                       animate={{ width: `${((scanStep + 1) / (steps.length + 1)) * 100}%` }}
-                      transition={{ duration: 1.2, ease: "easeInOut" }}
+                      transition={{ duration: 1.0, ease: "easeInOut" }}
                     />
                   </div>
                </div>
 
-               <div className="h-16 w-full flex flex-col justify-center items-center">
+               <div className="h-14 w-full flex flex-col justify-center items-center">
                   <AnimatePresence mode="wait">
                     <motion.div 
                       key={scanStep}
-                      initial={{ opacity:0, y:10 }} 
+                      initial={{ opacity:0, y:8 }} 
                       animate={{ opacity:1, y:0 }} 
-                      exit={{ opacity:0, y:-10 }}
-                      transition={{ duration: 0.4 }}
-                      className="text-[16px] font-bold text-[hsl(var(--col-text))] tracking-tight"
+                      exit={{ opacity:0, y:-8 }}
+                      transition={{ duration: 0.35 }}
+                      className="text-[15px] font-semibold text-[hsl(var(--col-text))] tracking-tight"
                     >
                       {steps[scanStep] || "Finalizing Manifest Signal..."}
                     </motion.div>

@@ -64,7 +64,7 @@ const FEATURES = [
     core: { icon: Activity, title: "Sync Agent", sub: "Real-time Poll", color: "col-accent", glow: "from-emerald-400 via-teal-400 to-[hsl(var(--col-primary))]" },
     outputs: [
       { icon: FolderOpen, title: "Audit Folders", sub: "Auto-filed", subClass: "text-emerald-500 bg-emerald-500/10", color: "col-accent" },
-      { icon: Bell, title: "Drift Alerts", sub: "Actionable", subClass: "text-[hsl(var(--col-muted))]", color: "col-primary" }
+      { icon: Bell, title: "Compliance Logs", sub: "Actionable", subClass: "text-[hsl(var(--col-muted))]", color: "col-primary" }
     ]
   }
 ];
@@ -81,117 +81,144 @@ export default function LandingPage({ onGetStarted, onChat }) {
       {dark && <BeamBackground />}
 
       {/* ══ NAV ══ */}
-      <nav className="flex items-center justify-between px-8 py-5 max-w-6xl mx-auto">
-        <div className="flex items-center cursor-pointer hover:opacity-90 transition-opacity">
-          <span className="font-extrabold text-[26px] tracking-tighter text-[#1eaba3] drop-shadow-sm">Pramanik</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <ThemeToggle />
-          <button
-            onClick={onGetStarted}
-            className="px-5 py-2 rounded-lg font-medium text-white bg-[hsl(var(--col-primary))]"
-          >
-            Login
-          </button>
+      <nav className="sticky top-0 z-40 w-full bg-[hsl(var(--col-bg)/0.88)] backdrop-blur-md border-b border-[hsl(var(--col-border))]">
+        <div className="max-w-[1280px] mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center cursor-pointer hover:opacity-80 transition-opacity">
+            <span className="font-extrabold text-[22px] tracking-tight text-[hsl(var(--col-primary))]">Pramanik</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <button
+              onClick={onGetStarted}
+              className="btn-solid h-9 px-5 text-[13px]"
+            >
+              Login
+            </button>
+          </div>
         </div>
       </nav>
 
       {/* ══ HERO SECTION ══ */}
-      <section className="relative pt-40 pb-32 overflow-hidden bg-[hsl(var(--col-bg))] min-h-[90vh] flex flex-col items-center justify-center text-center border-b border-[hsl(var(--col-border))]">
+      <section className="relative pt-24 pb-24 overflow-hidden bg-[hsl(var(--col-bg))] min-h-[86vh] flex flex-col items-center justify-center text-center border-b border-[hsl(var(--col-border))]">
 
-        {/* Dynamic Background — Hyperspeed in dark, DotGrid in light */}
+        {/* Dynamic Background */}
         {dark ? (
           <>
             <WebGLBoundary>
               <Suspense fallback={null}>
-                <Hyperspeed speed={1.2} />
+                <Hyperspeed speed={1.0} />
               </Suspense>
             </WebGLBoundary>
             {/* Dark overlay so text stays fully legible */}
-            <div className="absolute inset-0 bg-gradient-to-b from-[hsl(var(--col-bg)/0.55)] via-[hsl(var(--col-bg)/0.35)] to-[hsl(var(--col-bg))] pointer-events-none z-[1]" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[hsl(var(--col-bg)/0.60)] via-[hsl(var(--col-bg)/0.40)] to-[hsl(var(--col-bg))] pointer-events-none z-[1]" />
           </>
         ) : (
-          <div className="absolute inset-0 pointer-events-auto z-0" style={{ maskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)' }}>
+          <div className="absolute inset-0 pointer-events-auto z-0" style={{ maskImage: 'linear-gradient(to bottom, black 80%, transparent 100%)', opacity: 0.7 }}>
             <DotGrid
-              dotSize={4}
-              gap={18}
-              baseColor="#e5efeb"
-              activeColor="#1eaba3"
-              proximity={120}
-              shockRadius={250}
-              shockStrength={5}
-              resistance={750}
-              returnDuration={1.5}
+              dotSize={3}
+              gap={20}
+              baseColor="#dde8e4"
+              activeColor="#2F7D6E"
+              proximity={100}
+              shockRadius={200}
+              shockStrength={4}
+              resistance={800}
+              returnDuration={1.8}
             />
           </div>
         )}
 
-        {/* Soft radial glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-full rounded-full blur-[160px] opacity-[0.06] pointer-events-none z-[1]"
+        {/* Soft radial glow — very subtle */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[70%] h-full rounded-full blur-[180px] opacity-[0.04] pointer-events-none z-[1]"
           style={{ background: "hsl(var(--col-primary))" }} />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[hsl(var(--col-bg))] pointer-events-none z-[1]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[hsl(var(--col-bg))] pointer-events-none z-[1]" />
 
-        <div className="max-w-5xl mx-auto px-6 relative z-10 w-full flex flex-col items-center">
-          <h1 className="text-[clamp(48px,7vw,88px)] font-bold leading-[1.05] tracking-tight mb-8">
-            Trust doesn't wait for<br /> your next audit.<br />
+        <div className="max-w-4xl mx-auto px-6 relative z-10 w-full flex flex-col items-center">
+          {/* Eyebrow */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="badge mb-7"
+          >
+            Autonomous Trust Platform
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.08 }}
+            className="text-[clamp(40px,6vw,72px)] font-bold leading-[1.08] tracking-[-0.035em] mb-6"
+          >
+            Trust doesn't wait for<br />your next audit.<br />
             Neither does <span className="bg-clip-text text-transparent bg-gradient-to-r from-[hsl(var(--col-primary))] to-[hsl(var(--col-accent))]">Pramanik.</span>
-          </h1>
+          </motion.h1>
 
-          <p className="text-[18px] md:text-[20px] leading-[1.6] text-[hsl(var(--col-muted))] max-w-[800px] mb-12 font-medium">
+          <motion.p
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.16 }}
+            className="text-[17px] leading-[1.65] text-[hsl(var(--col-muted))] max-w-[680px] mb-10 font-normal"
+          >
             The world's first Autonomous Trust Platform. Pramanik detects change across your posture,
             determines what's at risk, and acts — across compliance, vendor risk, AI governance, and
             more — so your organization stays trustworthy without the operational chaos.
-          </p>
+          </motion.p>
 
-          <div className="relative mb-20">
-            <button onClick={onGetStarted} className="btn-primary py-4 px-10 text-[18px]">
-              Get Started
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.24 }}
+            className="relative mb-16"
+          >
+            <button onClick={onGetStarted} className="btn-solid py-3 px-8 text-[15px] flex items-center gap-2">
+              Get Started <ArrowRight className="w-4 h-4" />
             </button>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* ══ TRUSTED BY MARQUEE ══ */}
-      <section className="relative border-y border-[hsl(var(--col-border))] py-10 overflow-hidden"
+      <section className="relative border-y border-[hsl(var(--col-border))] py-6 overflow-hidden"
         style={{
           background: dark
-            ? "linear-gradient(135deg, hsl(222 18% 10%) 0%, hsl(222 22% 13%) 50%, hsl(222 18% 10%) 100%)"
-            : "linear-gradient(135deg, hsl(175 60% 22%) 0%, hsl(160 50% 28%) 50%, hsl(175 60% 22%) 100%)"
+            ? "linear-gradient(135deg, hsl(222 20% 10%) 0%, hsl(222 22% 12%) 50%, hsl(222 20% 10%) 100%)"
+            : "linear-gradient(135deg, hsl(168 46% 28%) 0%, hsl(152 36% 32%) 50%, hsl(168 46% 28%) 100%)"
         }}>
 
-        {/* Glow orbs in background */}
+        {/* Subtle glow orbs in background */}
         {dark && (
           <>
-            <div className="absolute -left-20 top-1/2 -translate-y-1/2 w-64 h-64 rounded-full blur-[80px] opacity-20 pointer-events-none"
-              style={{ background: "hsl(175 60% 50%)" }} />
-            <div className="absolute -right-20 top-1/2 -translate-y-1/2 w-64 h-64 rounded-full blur-[80px] opacity-15 pointer-events-none"
-              style={{ background: "hsl(150 55% 50%)" }} />
+            <div className="absolute -left-16 top-1/2 -translate-y-1/2 w-48 h-48 rounded-full blur-[60px] opacity-10 pointer-events-none"
+              style={{ background: "hsl(168 52% 44%)" }} />
+            <div className="absolute -right-16 top-1/2 -translate-y-1/2 w-48 h-48 rounded-full blur-[60px] opacity-8 pointer-events-none"
+              style={{ background: "hsl(152 44% 46%)" }} />
           </>
         )}
 
-        {/* Aurora wave overlay */}
-        <div className="absolute inset-0 z-0 opacity-30 mix-blend-screen pointer-events-none">
+        {/* Aurora wave overlay — subtle */}
+        <div className="absolute inset-0 z-0 opacity-20 mix-blend-screen pointer-events-none">
           <Aurora
             colorStops={["#2dd4bf", "#A5E6D6", "#34d399"]}
-            blend={0.4}
-            amplitude={0.8}
-            speed={0.6}
+            blend={0.3}
+            amplitude={0.6}
+            speed={0.4}
           />
         </div>
 
-        {/* Top + bottom edge fade */}
-        <div className="absolute inset-x-0 top-0 h-8 pointer-events-none z-10"
-          style={{ background: dark ? "linear-gradient(to bottom, hsl(222 18% 9%), transparent)" : "linear-gradient(to bottom, hsl(175 60% 22%), transparent)" }} />
-        <div className="absolute inset-x-0 bottom-0 h-8 pointer-events-none z-10"
-          style={{ background: dark ? "linear-gradient(to top, hsl(222 18% 9%), transparent)" : "linear-gradient(to top, hsl(175 60% 22%), transparent)" }} />
+        {/* Edge fades */}
+        <div className="absolute inset-x-0 top-0 h-6 pointer-events-none z-10"
+          style={{ background: dark ? "linear-gradient(to bottom, hsl(222 20% 10%), transparent)" : "linear-gradient(to bottom, hsl(168 46% 28%), transparent)" }} />
+        <div className="absolute inset-x-0 bottom-0 h-6 pointer-events-none z-10"
+          style={{ background: dark ? "linear-gradient(to top, hsl(222 20% 10%), transparent)" : "linear-gradient(to top, hsl(168 46% 28%), transparent)" }} />
 
-        <div className="max-w-[1400px] mx-auto relative z-[5]">
-          <p className="text-center text-[11px] font-bold text-white/50 mb-7 uppercase tracking-[0.3em] px-6">
+        <div className="max-w-[1280px] mx-auto relative z-[5]">
+          <p className="text-center text-[10px] font-bold text-white/40 mb-5 uppercase tracking-[0.35em] px-6">
             4+ Compliance Frameworks
           </p>
           <div className="relative flex w-full overflow-hidden"
-            style={{ maskImage: 'linear-gradient(to right, transparent, black 12%, black 88%, transparent)' }}>
-            <div className="animate-marquee gap-32 items-center w-max pr-32">
+            style={{ maskImage: 'linear-gradient(to right, transparent, black 14%, black 86%, transparent)' }}>
+            <div className="animate-marquee gap-28 items-center w-max pr-28">
               {[
                 { name: "SOC 2", accent: "#2dd4bf" },
                 { name: "GDPR", accent: "#34d399" },
@@ -210,10 +237,10 @@ export default function LandingPage({ onGetStarted, onChat }) {
                 { name: "PCI DSS", accent: "#34d399" },
                 { name: "DPDP", accent: "#2dd4bf" },
               ].map(({ name, accent }, i) => (
-                <div key={i} className="inline-flex items-center gap-2 mx-10 whitespace-nowrap group cursor-default">
-                  <span className="w-1.5 h-1.5 rounded-full opacity-70 group-hover:opacity-100 transition-opacity"
+                <div key={i} className="inline-flex items-center gap-2 mx-8 whitespace-nowrap group cursor-default">
+                  <span className="w-1 h-1 rounded-full opacity-60 group-hover:opacity-100 transition-opacity"
                     style={{ background: accent }} />
-                  <span className="text-[18px] font-bold text-white/75 group-hover:text-white transition-colors tracking-tight">
+                  <span className="text-[15px] font-semibold text-white/65 group-hover:text-white/90 transition-colors tracking-tight">
                     {name}
                   </span>
                 </div>
@@ -225,16 +252,17 @@ export default function LandingPage({ onGetStarted, onChat }) {
 
 
       {/* ══ STAGE OF TRUST SECTION ══ */}
-      <section className="py-32 px-6 max-w-[1400px] mx-auto border-b border-[hsl(var(--col-border))]">
-        <div className="text-center mb-24">
-          <span className="inline-block px-3 py-1 bg-[hsl(var(--col-primary)/0.1)] text-[hsl(var(--col-primary))] font-bold text-[12px] uppercase tracking-widest rounded-full mb-6">The Challenge</span>
-          <h2 className="text-[48px] md:text-[56px] font-bold tracking-tight">Built for every stage of <span className="bg-clip-text text-transparent bg-gradient-to-r from-[hsl(var(--col-primary))] to-[hsl(var(--col-accent))] italic">trust</span></h2>
+      <section className="py-24 border-b border-[hsl(var(--col-border))]">
+        <div className="max-w-[1280px] mx-auto px-6">
+        <div className="text-center mb-16">
+          <span className="badge mb-5">The Challenge</span>
+          <h2 className="text-[38px] md:text-[48px] font-bold tracking-[-0.03em] mt-4">Built for every stage of <span className="bg-clip-text text-transparent bg-gradient-to-r from-[hsl(var(--col-primary))] to-[hsl(var(--col-accent))] italic">trust</span></h2>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-16 items-start relative pb-32">
+        <div className="grid lg:grid-cols-2 gap-16 items-start relative pb-24">
           {/* Left Side: Vertical Flowchart Timeline */}
           <div className="relative w-full">
-            <div className="absolute left-6 top-0 bottom-0 w-px bg-gradient-to-b from-[hsl(var(--col-primary))] via-[hsl(var(--col-accent))] to-[hsl(var(--col-border))]" />
+            <div className="absolute left-5 top-0 bottom-0 w-px bg-gradient-to-b from-[hsl(var(--col-primary))] via-[hsl(var(--col-accent))] to-[hsl(var(--col-border)/0.5)]" />
 
             {[
               { label: "Startups", title: "Get audit-ready in weeks", desc: "Zero to SOC 2 with no dedicated team. AI scopes, maps controls, and closes gaps autonomously.", stats: [{ val: "14", sub: "Days Avg" }, { val: "85%", sub: "Automated" }], color: "var(--col-accent)" },
@@ -243,41 +271,41 @@ export default function LandingPage({ onGetStarted, onChat }) {
             ].map((item, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, x: -80 }}
+                initial={{ opacity: 0, x: -60 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: false, amount: 0.5 }}
-                transition={{ duration: 0.6, ease: "easeOut", delay: i * 0.1 }}
-                className={`relative pl-16 ${i < 2 ? "pb-16" : ""}`}
+                transition={{ duration: 0.55, ease: "easeOut", delay: i * 0.1 }}
+                className={`relative pl-14 ${i < 2 ? "pb-14" : ""}`}
               >
-                <div className="absolute left-[17px] top-6 w-[18px] h-[18px] rounded-full ring-4 ring-[hsl(var(--col-surface))]"
+                <div className="absolute left-[14px] top-5 w-[14px] h-[14px] rounded-full ring-[3px] ring-[hsl(var(--col-surface))]"
                   style={{ background: `hsl(${item.color})` }} />
-                <div className="bg-[hsl(var(--col-surface))] border border-[hsl(var(--col-border))] p-6 rounded-2xl">
+                <div className="bg-[hsl(var(--col-surface))] border border-[hsl(var(--col-border))] p-6 rounded-2xl hover:border-[hsl(var(--col-primary)/0.25)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-all">
                   <span className="font-bold tracking-widest text-[10px] uppercase text-[hsl(var(--col-primary))]">{item.label}</span>
-                  <h4 className="text-[20px] font-bold mt-2 leading-tight">{item.title}</h4>
-                  <p className="text-[13px] text-[hsl(var(--col-muted))] mt-2 leading-snug">{item.desc}</p>
+                  <h4 className="text-[18px] font-bold mt-2 leading-snug tracking-tight">{item.title}</h4>
+                  <p className="text-[14px] text-[hsl(var(--col-muted))] mt-2 leading-relaxed">{item.desc}</p>
                   {item.stats && (
-                    <div className="flex items-center gap-5 mt-4">
+                    <div className="flex items-center gap-6 mt-4">
                       {item.stats.map((s, j) => (
                         <div key={j} className="text-center">
-                          <span className="text-[20px] font-black text-[hsl(var(--col-primary))]">{s.val}</span>
-                          <span className="text-[11px] block text-[hsl(var(--col-muted))]">{s.sub}</span>
+                          <span className="text-[22px] font-black text-[hsl(var(--col-primary))]">{s.val}</span>
+                          <span className="text-[11px] block text-[hsl(var(--col-muted))] font-medium">{s.sub}</span>
                         </div>
                       ))}
                     </div>
                   )}
                   {item.tags && (
-                    <div className="flex items-center gap-3 mt-4">
+                    <div className="flex items-center gap-2 mt-4">
                       {item.tags.map((t, j) => (
-                        <div key={j} className="bg-[hsl(var(--col-primary)/0.1)] px-3 py-1.5 rounded-lg">
-                          <span className="text-[12px] font-bold text-[hsl(var(--col-primary))]">{t}</span>
+                        <div key={j} className="bg-[hsl(var(--col-primary)/0.08)] px-3 py-1 rounded-lg">
+                          <span className="text-[12px] font-semibold text-[hsl(var(--col-primary))]">{t}</span>
                         </div>
                       ))}
                     </div>
                   )}
                   {item.badge && (
-                    <div className="flex items-center gap-2.5 mt-4">
-                      <div className="w-2 h-2 rounded-full bg-[hsl(var(--col-accent))] animate-pulse" />
-                      <span className="text-[12px] font-semibold text-[hsl(var(--col-muted))]">{item.badge}</span>
+                    <div className="flex items-center gap-2 mt-4">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--col-accent))] animate-pulse" />
+                      <span className="text-[12px] font-medium text-[hsl(var(--col-muted))]">{item.badge}</span>
                     </div>
                   )}
                 </div>
@@ -301,68 +329,76 @@ export default function LandingPage({ onGetStarted, onChat }) {
               {
                 label: "Enterprises", title: "A defensible trust posture. Always.",
                 desc: "Navigating intense regulatory pressure requires absolute visibility. Our Autonomous AI Inference Core ensures non-stop compliance visibility across your sprawling cloud infrastructure and multi-national vendor network.",
-                style: dark ? "bg-[hsl(var(--col-raise))] border border-[hsl(var(--col-border))]" : "bg-[hsl(180,30%,12%)]", dark: true
+                style: dark ? "bg-[hsl(var(--col-raise))] border border-[hsl(var(--col-border))]" : "bg-[hsl(180,25%,14%)]", dark: true
               },
             ].map((card, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, x: 80 }}
+                initial={{ opacity: 0, x: 60 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: false, amount: 0.5 }}
-                transition={{ duration: 0.6, ease: "easeOut", delay: i * 0.1 }}
-                className={`p-8 rounded-2xl ${card.style} ${i < 2 ? "mb-8" : ""}`}
+                transition={{ duration: 0.55, ease: "easeOut", delay: i * 0.1 }}
+                className={`p-8 rounded-2xl ${card.style} ${i < 2 ? "mb-6" : ""}`}
               >
-                <span className={`inline-block px-3 py-1 rounded-full mb-5 font-bold text-[12px] uppercase tracking-widest ${card.light ? "bg-white/20 text-white" : card.dark ? "bg-white/10 text-white/60" : "bg-[hsl(var(--col-primary)/0.1)] text-[hsl(var(--col-primary))]"}`}>
+                <span className={`inline-block px-3 py-1 rounded-full mb-4 font-semibold text-[11px] uppercase tracking-[0.1em] ${card.light ? "bg-white/20 text-white" : card.dark ? "bg-white/10 text-white/55" : "bg-[hsl(var(--col-primary)/0.09)] text-[hsl(var(--col-primary))]"}`}>
                   {card.label}
                 </span>
-                <h3 className={`text-[28px] font-bold tracking-tight mb-4 ${card.light || card.dark ? "text-white" : ""}`}>
+                <h3 className={`text-[24px] font-bold tracking-tight mb-3 leading-snug ${card.light || card.dark ? "text-white" : ""}`}>
                   {card.title}
                 </h3>
-                <p className={`text-[15px] leading-[1.7] ${card.light ? "text-white/90" : card.dark ? "text-white/70" : "text-[hsl(var(--col-muted))]"}`}>
+                <p className={`text-[14px] leading-[1.7] ${card.light ? "text-white/88" : card.dark ? "text-white/65" : "text-[hsl(var(--col-muted))]"}`}>
                   {card.desc}
                 </p>
                 {i === 0 && (
-                  <a href="https://drive.google.com/file/d/1N7AI0cxkeV_YpPL60nKdPpHEnKtWXN-B/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex items-center gap-2 font-semibold text-[hsl(var(--col-primary))] hover:gap-3 transition-all">
-                    Learn more <ArrowRight className="w-4 h-4" />
+                  <a href="https://drive.google.com/file/d/1N7AI0cxkeV_YpPL60nKdPpHEnKtWXN-B/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="mt-5 inline-flex items-center gap-2 font-semibold text-[13px] text-[hsl(var(--col-primary))] hover:gap-3 transition-all">
+                    Learn more <ArrowRight className="w-3.5 h-3.5" />
                   </a>
                 )}
               </motion.div>
             ))}
           </div>
         </div>
+        </div>
       </section>
 
       <PricingSection />
 
       {/* ══ ARCHITECTURE / PLATFORM SECTION ══ */}
-      <section className="py-24 px-6 bg-[hsl(var(--col-bg))] relative border-b border-[hsl(var(--col-border))]">
-        <div className="max-w-[1400px] mx-auto text-center">
-          <span className="inline-block px-3 py-1 bg-[hsl(var(--col-primary)/0.1)] text-[hsl(var(--col-primary))] font-bold text-[12px] uppercase tracking-widest rounded-full mb-6">An Enterprise-Grade Engine</span>
-          <h2 className="text-[40px] md:text-[48px] font-bold tracking-tight mb-12">One unified autonomous trust platform.</h2>
+      <section className="py-24 bg-[hsl(var(--col-bg))] relative border-b border-[hsl(var(--col-border))]">
+        <div className="max-w-[1280px] mx-auto px-6 text-center">
+          <span className="badge mb-5">An Enterprise-Grade Engine</span>
+          <h2 className="text-[36px] md:text-[44px] font-bold tracking-[-0.025em] mt-4 mb-10">One unified autonomous trust platform.</h2>
 
-          <div className="flex flex-wrap justify-center gap-4 mb-20">
+          {/* Tab Buttons */}
+          <div className="flex flex-wrap justify-center gap-2 mb-16">
             {FEATURES.map((feature, i) => (
-              <button key={i} onClick={() => setActiveFeatureIndex(i)} className={`font-semibold py-2 px-6 rounded-[8px] border transition-colors ${i === activeFeatureIndex ? "bg-[hsl(var(--col-primary))] text-white border-transparent" : "bg-[hsl(var(--col-surface))] text-[hsl(var(--col-text))] border-[hsl(var(--col-border))] hover:border-[hsl(var(--col-primary)/0.5)]"}`}>
+              <button key={i} onClick={() => setActiveFeatureIndex(i)}
+                className={`font-semibold py-2 px-5 text-[13px] rounded-full border transition-all ${i === activeFeatureIndex
+                  ? "bg-[hsl(var(--col-primary))] text-white border-transparent shadow-[0_2px_8px_hsl(var(--col-primary)/0.2)]"
+                  : "bg-[hsl(var(--col-surface))] text-[hsl(var(--col-sub))] border-[hsl(var(--col-border))] hover:border-[hsl(var(--col-primary)/0.4)] hover:text-[hsl(var(--col-primary))]"}`}>
                 {feature.title}
               </button>
             ))}
           </div>
 
           {/* Architecture Graphic */}
-          <div className="relative max-w-4xl mx-auto h-[450px] border border-[hsl(var(--col-border))] rounded-2xl bg-[hsl(var(--col-surface))] overflow-hidden flex items-center justify-center p-8 bg-pattern-plus shadow-sm">
+          <div className="relative max-w-4xl mx-auto h-[420px] border border-[hsl(var(--col-border))] rounded-2xl bg-[hsl(var(--col-surface))] overflow-hidden flex items-center justify-center p-8 shadow-sm">
+            {/* Subtle background pattern inside diagram */}
+            <div className="absolute inset-0 bg-pattern-dots opacity-30" />
+
             <div className="flex w-full items-center justify-between relative z-10 px-4">
               {/* Inputs */}
-              <div className="flex flex-col gap-10 w-1/4">
+              <div className="flex flex-col gap-8 w-1/4">
                 {activeFeature.inputs.map(({ icon: Icon, title, sub, color }, i) => (
-                  <motion.div key={`${activeFeatureIndex}-input-${i}`} initial={{opacity:0, x:-20}} animate={{opacity:1, x:0}} transition={{delay: i*0.1}} whileHover={{ scale: 1.05, x: 5 }}
-                    className="bg-[hsl(var(--col-raise))] p-5 rounded-2xl shadow-sm border border-[hsl(var(--col-border))] flex items-center gap-4 cursor-pointer relative">
-                    <div className={`absolute -left-3 inset-y-0 w-1 bg-gradient-to-b from-[hsl(var(--${color}))] to-transparent rounded-full`} />
-                    <div className={`w-10 h-10 rounded-full bg-[hsl(var(--${color})/0.1)] flex items-center justify-center shrink-0`}>
-                      <Icon className={`w-5 h-5 text-[hsl(var(--${color}))]`} />
+                  <motion.div key={`${activeFeatureIndex}-input-${i}`} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} whileHover={{ scale: 1.04, x: 4 }}
+                    className="bg-[hsl(var(--col-raise))] p-4 rounded-xl border border-[hsl(var(--col-border))] flex items-center gap-3 cursor-pointer relative hover:border-[hsl(var(--col-primary)/0.3)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.05)] transition-all">
+                    <div className={`absolute -left-[3px] inset-y-4 w-[3px] bg-[hsl(var(--${color}))] rounded-full opacity-60`} />
+                    <div className={`w-9 h-9 rounded-lg bg-[hsl(var(--${color})/0.1)] flex items-center justify-center shrink-0`}>
+                      <Icon className={`w-4 h-4 text-[hsl(var(--${color}))]`} />
                     </div>
                     <div>
-                      <h5 className="text-[15px] font-bold leading-tight">{title}</h5>
-                      <p className="text-[12px] text-[hsl(var(--col-muted))] font-medium mt-0.5">{sub}</p>
+                      <h5 className="text-[13px] font-bold leading-tight">{title}</h5>
+                      <p className="text-[11px] text-[hsl(var(--col-muted))] font-medium mt-0.5">{sub}</p>
                     </div>
                   </motion.div>
                 ))}
@@ -370,17 +406,17 @@ export default function LandingPage({ onGetStarted, onChat }) {
 
               {/* Processing Core */}
               <div className="w-1/3 relative flex justify-center">
-                <motion.div animate={{ scale: [1, 1.05, 1], opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                <motion.div animate={{ scale: [1, 1.04, 1], opacity: [0.2, 0.45, 0.2] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                   className={`absolute inset-0 bg-[hsl(var(--${activeFeature.core.color}))] blur-3xl rounded-full transition-colors duration-500`} />
-                <div className={`relative z-10 p-[2px] rounded-3xl bg-gradient-to-tr ${activeFeature.core.glow} shadow-[0_8px_40px_rgb(30,171,163,0.3)] group cursor-crosshair transition-all duration-500`}>
-                  <div className="bg-[hsl(var(--col-surface))] p-8 rounded-[22px] flex flex-col items-center justify-center h-[180px] w-[180px] transition-transform duration-500 group-hover:scale-[0.98]">
-                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                      className={`absolute inset-2 border border-dashed border-[hsl(var(--${activeFeature.core.color})/0.3)] rounded-full pointer-events-none`} />
+                <div className={`relative z-10 p-[2px] rounded-3xl bg-gradient-to-tr ${activeFeature.core.glow} shadow-[0_6px_28px_hsl(var(--col-primary)/0.18)] group cursor-crosshair transition-all duration-500`}>
+                  <div className="bg-[hsl(var(--col-surface))] p-7 rounded-[22px] flex flex-col items-center justify-center h-[168px] w-[168px] transition-transform duration-500 group-hover:scale-[0.98]">
+                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 24, repeat: Infinity, ease: "linear" }}
+                      className={`absolute inset-2 border border-dashed border-[hsl(var(--${activeFeature.core.color})/0.2)] rounded-full pointer-events-none`} />
                     <AnimatePresence mode="wait">
-                      <motion.div key={activeFeatureIndex} initial={{opacity:0, scale:0.5}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.5}} transition={{duration: 0.3}} className="flex flex-col items-center justify-center h-full pt-1">
-                        <activeFeature.core.icon className={`w-14 h-14 text-[hsl(var(--${activeFeature.core.color}))] mb-4 relative z-10`} />
-                        <h4 className="font-bold text-[18px] mb-1 relative z-10 text-center leading-tight mx-[-10px]">{activeFeature.core.title}</h4>
-                        <span className="text-[10px] text-[hsl(var(--col-accent))] bg-[hsl(var(--col-primary)/0.05)] px-2 py-0.5 rounded-full uppercase font-bold tracking-widest relative z-10 whitespace-nowrap mt-1">{activeFeature.core.sub}</span>
+                      <motion.div key={activeFeatureIndex} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.6 }} transition={{ duration: 0.3 }} className="flex flex-col items-center justify-center h-full pt-1">
+                        <activeFeature.core.icon className={`w-12 h-12 text-[hsl(var(--${activeFeature.core.color}))] mb-3 relative z-10`} />
+                        <h4 className="font-bold text-[16px] mb-1 relative z-10 text-center leading-tight">{activeFeature.core.title}</h4>
+                        <span className="text-[9px] text-[hsl(var(--col-accent))] bg-[hsl(var(--col-primary)/0.06)] px-2 py-0.5 rounded-full uppercase font-bold tracking-widest relative z-10 whitespace-nowrap">{activeFeature.core.sub}</span>
                       </motion.div>
                     </AnimatePresence>
                   </div>
@@ -388,80 +424,84 @@ export default function LandingPage({ onGetStarted, onChat }) {
               </div>
 
               {/* Outputs */}
-              <div className="flex flex-col gap-10 w-1/4">
+              <div className="flex flex-col gap-8 w-1/4">
                 {activeFeature.outputs.map(({ icon: Icon, title, sub, subClass, color }, i) => (
-                  <motion.div key={`${activeFeatureIndex}-output-${i}`} initial={{opacity:0, x:20}} animate={{opacity:1, x:0}} transition={{delay: i*0.1}} whileHover={{ scale: 1.05, x: -5 }}
-                    className="bg-[hsl(var(--col-raise))] p-5 rounded-2xl shadow-sm border border-[hsl(var(--col-border))] flex items-center gap-4 cursor-pointer relative">
-                    <div className={`absolute -right-3 inset-y-0 w-1 bg-gradient-to-t from-[hsl(var(--${color}))] to-transparent rounded-full`} />
-                    <div className={`w-10 h-10 rounded-full bg-[hsl(var(--${color})/0.1)] flex items-center justify-center shrink-0`}>
-                      <Icon className={`w-5 h-5 text-[hsl(var(--${color}))]`} />
+                  <motion.div key={`${activeFeatureIndex}-output-${i}`} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} whileHover={{ scale: 1.04, x: -4 }}
+                    className="bg-[hsl(var(--col-raise))] p-4 rounded-xl border border-[hsl(var(--col-border))] flex items-center gap-3 cursor-pointer relative hover:border-[hsl(var(--col-primary)/0.3)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.05)] transition-all">
+                    <div className={`absolute -right-[3px] inset-y-4 w-[3px] bg-[hsl(var(--${color}))] rounded-full opacity-60`} />
+                    <div className={`w-9 h-9 rounded-lg bg-[hsl(var(--${color})/0.1)] flex items-center justify-center shrink-0`}>
+                      <Icon className={`w-4 h-4 text-[hsl(var(--${color}))]`} />
                     </div>
                     <div>
-                      <h5 className="text-[15px] font-bold leading-tight">{title}</h5>
-                      <p className={`text-[12px] font-bold mt-0.5 px-2 py-0.5 rounded-full inline-block ${subClass}`}>{sub}</p>
+                      <h5 className="text-[13px] font-bold leading-tight">{title}</h5>
+                      <p className={`text-[11px] font-semibold mt-0.5 px-1.5 py-0.5 rounded-md inline-block ${subClass}`}>{sub}</p>
                     </div>
                   </motion.div>
                 ))}
               </div>
             </div>
 
-            {/* Connecting Lines */}
+            {/* Connecting Lines — softer, slower */}
             <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
-              <path d="M 240 130 C 320 130, 360 225, 410 225" fill="none" stroke="hsl(var(--col-primary))" strokeWidth="2" opacity="0.15" />
-              <path d="M 240 320 C 320 320, 360 225, 410 225" fill="none" stroke="hsl(var(--col-accent))" strokeWidth="2" opacity="0.15" />
-              <path d="M 480 225 C 530 225, 570 130, 650 130" fill="none" stroke="hsl(var(--col-accent))" strokeWidth="2" opacity="0.15" />
-              <path d="M 480 225 C 530 225, 570 320, 650 320" fill="none" stroke="hsl(var(--col-primary))" strokeWidth="2" opacity="0.15" />
-              <motion.path d="M 240 130 C 320 130, 360 225, 410 225" fill="none" stroke="hsl(var(--col-primary))" strokeWidth="2" strokeDasharray="4 8" animate={{ strokeDashoffset: [-24, 0] }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} />
-              <motion.path d="M 240 320 C 320 320, 360 225, 410 225" fill="none" stroke="hsl(var(--col-accent))" strokeWidth="2" strokeDasharray="4 8" animate={{ strokeDashoffset: [-24, 0] }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} />
-              <motion.path d="M 480 225 C 530 225, 570 130, 650 130" fill="none" stroke="hsl(var(--col-accent))" strokeWidth="2" strokeDasharray="4 8" animate={{ strokeDashoffset: [24, 0] }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }} />
-              <motion.path d="M 480 225 C 530 225, 570 320, 650 320" fill="none" stroke="hsl(var(--col-primary))" strokeWidth="2" strokeDasharray="4 8" animate={{ strokeDashoffset: [24, 0] }} transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }} />
+              <path d="M 240 130 C 320 130, 360 210, 410 210" fill="none" stroke="hsl(var(--col-primary))" strokeWidth="1.5" opacity="0.12" />
+              <path d="M 240 290 C 320 290, 360 210, 410 210" fill="none" stroke="hsl(var(--col-accent))" strokeWidth="1.5" opacity="0.12" />
+              <path d="M 480 210 C 530 210, 570 130, 650 130" fill="none" stroke="hsl(var(--col-accent))" strokeWidth="1.5" opacity="0.12" />
+              <path d="M 480 210 C 530 210, 570 290, 650 290" fill="none" stroke="hsl(var(--col-primary))" strokeWidth="1.5" opacity="0.12" />
+              <motion.path d="M 240 130 C 320 130, 360 210, 410 210" fill="none" stroke="hsl(var(--col-primary))" strokeWidth="1.5" strokeDasharray="4 10" animate={{ strokeDashoffset: [-28, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} />
+              <motion.path d="M 240 290 C 320 290, 360 210, 410 210" fill="none" stroke="hsl(var(--col-accent))" strokeWidth="1.5" strokeDasharray="4 10" animate={{ strokeDashoffset: [-28, 0] }} transition={{ duration: 2.4, repeat: Infinity, ease: "linear" }} />
+              <motion.path d="M 480 210 C 530 210, 570 130, 650 130" fill="none" stroke="hsl(var(--col-accent))" strokeWidth="1.5" strokeDasharray="4 10" animate={{ strokeDashoffset: [28, 0] }} transition={{ duration: 2.2, repeat: Infinity, ease: "linear" }} />
+              <motion.path d="M 480 210 C 530 210, 570 290, 650 290" fill="none" stroke="hsl(var(--col-primary))" strokeWidth="1.5" strokeDasharray="4 10" animate={{ strokeDashoffset: [28, 0] }} transition={{ duration: 2.6, repeat: Infinity, ease: "linear" }} />
             </svg>
           </div>
         </div>
       </section>
 
       {/* ══ FRAMEWORKS EXPANSION ══ */}
-      <section className="py-32 bg-[hsl(var(--col-bg))] relative overflow-hidden border-t border-[hsl(var(--col-border))]">
-        <div className="max-w-[1400px] mx-auto px-6 relative z-10">
-          <div className="max-w-2xl mb-16">
-            <h2 className="text-[48px] font-bold tracking-tight mb-6">4+ Frameworks. And Counting.</h2>
-            <p className="text-[18px] text-[hsl(var(--col-muted))] leading-relaxed mb-8">
+      <section className="py-24 bg-[hsl(var(--col-bg))] relative overflow-hidden border-t border-[hsl(var(--col-border))]">
+        <div className="max-w-[1280px] mx-auto px-6 relative z-10">
+          <div className="max-w-2xl mb-14">
+            <h2 className="text-[40px] font-bold tracking-[-0.025em] mb-4">4+ Frameworks. And Counting.</h2>
+            <p className="text-[16px] text-[hsl(var(--col-muted))] leading-relaxed mb-7">
               SOC 2, ISO 27001, HIPAA, GDPR, PCI DSS, and 4+ global standards. Upload any additional regulation or contract — Pramanik translates it into controls automatically.
             </p>
-            <a href="https://drive.google.com/file/d/1N7AI0cxkeV_YpPL60nKdPpHEnKtWXN-B/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="btn-primary py-3.5 px-8 inline-flex items-center gap-2 w-fit">
+            <a href="https://drive.google.com/file/d/1N7AI0cxkeV_YpPL60nKdPpHEnKtWXN-B/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="btn-primary py-3 px-7 inline-flex items-center gap-2 w-fit text-[14px]">
               Learn more <ArrowRight className="w-4 h-4" />
             </a>
           </div>
 
-          <div className="h-[400px] w-full relative mt-20 hidden md:block rounded-2xl border border-[hsl(var(--col-border))] bg-[hsl(var(--col-surface))] shadow-sm overflow-hidden">
-            <div className="absolute inset-0 bg-pattern-plus opacity-30" />
+          {/* Framework Bubbles Visual */}
+          <div className="h-[380px] w-full relative mt-16 hidden md:block rounded-2xl border border-[hsl(var(--col-border))] bg-[hsl(var(--col-surface))] overflow-hidden">
+            <div className="absolute inset-0 bg-pattern-dots opacity-20" />
 
-            <div className="absolute left-1/4 top-1/2 -translate-y-1/2 w-48 h-48 border-2 border-dashed border-[hsl(var(--col-primary)/0.3)] rounded-full flex items-center justify-center bg-[hsl(var(--col-surface))] z-20">
-              <div className="w-32 h-32 bg-gradient-to-br from-[hsl(var(--col-primary))] to-[hsl(var(--col-accent))] rounded-2xl flex items-center justify-center shadow-[0_8px_30px_rgb(45,212,191,0.3)] flex-col text-white">
-                <Shield className="w-12 h-12 mb-2" />
-                <span className="text-[10px] font-bold uppercase tracking-widest">Frameworks</span>
+            {/* Center hub */}
+            <div className="absolute left-1/4 top-1/2 -translate-y-1/2 w-44 h-44 border border-dashed border-[hsl(var(--col-primary)/0.25)] rounded-full flex items-center justify-center bg-[hsl(var(--col-surface))] z-20">
+              <div className="w-28 h-28 bg-gradient-to-br from-[hsl(var(--col-primary))] to-[hsl(var(--col-accent))] rounded-2xl flex items-center justify-center shadow-[0_6px_24px_hsl(var(--col-primary)/0.22)] flex-col text-white">
+                <Shield className="w-10 h-10 mb-1.5" />
+                <span className="text-[9px] font-bold uppercase tracking-widest">Frameworks</span>
               </div>
             </div>
 
+            {/* Framework bubbles — more uniform sizes, slightly muted */}
             {[
-              { label: "SOC 2",      pos: "right-[20%] top-[20%]",    size: "w-24 h-24",        color: "bg-[hsl(var(--col-primary))]" },
-              { label: "ISO 27001",  pos: "right-[35%] top-[10%]",    size: "w-20 h-20",        color: "bg-[hsl(var(--col-accent))]"  },
-              { label: "HIPAA",      pos: "right-[45%] top-[35%]",    size: "w-20 h-20",        color: "bg-teal-400"                  },
-              { label: "FR",         pos: "right-[30%] top-[45%]",    size: "w-16 h-16",        color: "bg-emerald-600"               },
-              { label: "AICPA SOC",  pos: "right-[15%] top-[40%]",    size: "w-[90px] h-[90px]",color: "bg-cyan-500"                  },
-              { label: "NIST 800-53",pos: "right-[25%] bottom-[20%]", size: "w-20 h-20",        color: "bg-[hsl(var(--col-primary))]" },
-              { label: "CCPA",       pos: "right-[40%] bottom-[30%]", size: "w-[70px] h-[70px]",color: "bg-slate-700"                 },
-              { label: "DPDP",       pos: "right-[13%] bottom-[12%]", size: "w-[72px] h-[72px]",color: "bg-[#0e7490]"                 },
-            ].map(({ label, pos, size, color }) => (
-              <div key={label} className={`absolute ${pos} ${size} ${color} rounded-full flex flex-col items-center justify-center text-white font-bold text-center leading-tight shadow-md z-20 hover:scale-110 transition-transform cursor-pointer border-2 border-[hsl(var(--col-border))]`}>
-                {label.split(" ").map((w, i) => <span key={i} className="text-xs">{w}</span>)}
+              { label: "SOC 2",      pos: "right-[20%] top-[18%]",    size: "w-20 h-20",        color: "bg-[hsl(var(--col-primary))]", opacity: "opacity-90" },
+              { label: "ISO 27001",  pos: "right-[35%] top-[10%]",    size: "w-[72px] h-[72px]",color: "bg-[hsl(var(--col-accent))]",  opacity: "opacity-85" },
+              { label: "HIPAA",      pos: "right-[46%] top-[34%]",    size: "w-[72px] h-[72px]",color: "bg-teal-500",                  opacity: "opacity-80" },
+              { label: "FR",         pos: "right-[31%] top-[46%]",    size: "w-[60px] h-[60px]",color: "bg-emerald-600",               opacity: "opacity-80" },
+              { label: "AICPA SOC",  pos: "right-[16%] top-[40%]",   size: "w-20 h-20",        color: "bg-cyan-600",                  opacity: "opacity-85" },
+              { label: "NIST 800-53",pos: "right-[25%] bottom-[18%]", size: "w-[72px] h-[72px]",color: "bg-[hsl(var(--col-primary))]", opacity: "opacity-80" },
+              { label: "CCPA",       pos: "right-[40%] bottom-[28%]", size: "w-[64px] h-[64px]",color: "bg-slate-600",                 opacity: "opacity-80" },
+              { label: "DPDP",       pos: "right-[13%] bottom-[12%]", size: "w-[68px] h-[68px]",color: "bg-[#0e7490]",                 opacity: "opacity-85" },
+            ].map(({ label, pos, size, color, opacity }) => (
+              <div key={label} className={`absolute ${pos} ${size} ${color} ${opacity} rounded-full flex flex-col items-center justify-center text-white font-semibold text-center leading-tight z-20 hover:opacity-100 hover:scale-105 transition-all duration-200 cursor-pointer`}>
+                {label.split(" ").map((w, i) => <span key={i} className="text-[11px]">{w}</span>)}
               </div>
             ))}
 
+            {/* Connector lines */}
             <div className="absolute left-[35%] top-1/2 -translate-y-[1px] w-[50%] h-[2px] z-10">
               <svg width="100%" height="400" className="absolute top-1/2 -translate-y-1/2 overflow-visible">
-                <path d="M 0 200 L 200 50"  fill="none" stroke="hsl(var(--col-primary) / 0.4)" strokeWidth="2" strokeDasharray="4 4" />
-                <path d="M 0 200 L 200 350" fill="none" stroke="hsl(var(--col-primary) / 0.4)" strokeWidth="2" strokeDasharray="4 4" />
+                <path d="M 0 200 L 200 50"  fill="none" stroke="hsl(var(--col-primary) / 0.3)" strokeWidth="1.5" strokeDasharray="4 5" />
+                <path d="M 0 200 L 200 350" fill="none" stroke="hsl(var(--col-primary) / 0.3)" strokeWidth="1.5" strokeDasharray="4 5" />
               </svg>
             </div>
           </div>
@@ -469,40 +509,40 @@ export default function LandingPage({ onGetStarted, onChat }) {
       </section>
 
       {/* ══ FOOTER ══ */}
-      <footer className="relative bg-[hsl(var(--col-surface))] py-14 px-6 overflow-hidden">
+      <footer className="relative bg-[hsl(var(--col-surface))] py-16 px-6 overflow-hidden border-t border-[hsl(var(--col-border))]">
 
         {/* Animated shimmer top border */}
         <div className="absolute top-0 inset-x-0 h-px overflow-hidden">
           <motion.div
             animate={{ x: ["-100%", "100%"] }}
-            transition={{ duration: 3.5, repeat: Infinity, ease: "linear" }}
-            className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-transparent via-[hsl(var(--col-primary))] to-transparent opacity-70"
+            transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+            className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-transparent via-[hsl(var(--col-primary))] to-transparent opacity-50"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[hsl(var(--col-border))] to-transparent" />
         </div>
 
         {/* Ambient glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 bg-[hsl(var(--col-primary)/0.05)] blur-3xl rounded-full pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-24 bg-[hsl(var(--col-primary)/0.04)] blur-3xl rounded-full pointer-events-none" />
 
-        <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row justify-between items-center gap-6 relative z-10">
+        <div className="max-w-[1280px] mx-auto flex flex-col md:flex-row justify-between items-center gap-6 relative z-10">
 
           {/* Brand + tagline */}
           <div className="flex flex-col items-start gap-1">
-            <span className="font-extrabold text-[28px] tracking-tighter text-[#1eaba3] drop-shadow-sm">Pramanik</span>
-            <span className="text-[10px] text-[hsl(var(--col-primary))] font-semibold uppercase tracking-[0.15em] ml-1">Autonomous Trust Platform</span>
+            <span className="font-extrabold text-[24px] tracking-tight text-[hsl(var(--col-primary))]">Pramanik</span>
+            <span className="text-[10px] text-[hsl(var(--col-muted))] font-medium uppercase tracking-[0.18em]">Autonomous Trust Platform</span>
           </div>
 
           {/* Status badge */}
           <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-[hsl(var(--col-border))] bg-[hsl(var(--col-raise))]">
-            <span className="relative flex h-2 w-2">
+            <span className="relative flex h-1.5 w-1.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
             </span>
-            <span className="text-[12px] font-semibold text-[hsl(var(--col-sub))]">All systems operational</span>
+            <span className="text-[12px] font-medium text-[hsl(var(--col-sub))]">All systems operational</span>
           </div>
 
           {/* Copyright */}
-          <p className="text-[13px] font-medium text-[hsl(var(--col-muted))] tracking-wide">
+          <p className="text-[12px] font-medium text-[hsl(var(--col-muted))]">
             © 2026 Pramanik Inc. All rights reserved.
           </p>
         </div>

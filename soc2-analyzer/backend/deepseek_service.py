@@ -321,7 +321,7 @@ def chat_with_rag(user_question: str, conversation_history: list = None) -> dict
         # Call Deepseek V3.2 API via NVIDIA
         client = _get_client()
         response = client.chat.completions.create(
-            model="deepseek-ai/deepseek-v3.2",
+            model="deepseek-ai/deepseek-r1",
             messages=[{"role": "system", "content": SYSTEM_PROMPT}] + messages,
             temperature=0.7,
             top_p=0.95,
@@ -345,14 +345,14 @@ def chat_with_rag(user_question: str, conversation_history: list = None) -> dict
             "response": assistant_response,
             "sources": sources[:3] if sources else [],
             "confidence": "high" if sources else "medium",
-            "model": "deepseek-v3.2 (NVIDIA hosted)",
+            "model": "deepseek-r1 (NVIDIA hosted)",
             "timestamp": str(__import__('datetime').datetime.utcnow().isoformat())
         }
     
     except Exception as e:
         return {
             "error": str(e),
-            "fallback": "Unable to reach Deepseek V3.2. Please try again or contact support.",
+            "fallback": "Unable to reach Deepseek R1. Please try again or contact support.",
             "response": "I apologize, but I'm temporarily unavailable. Please use the knowledge base or try asking a simpler question."
         }
 
@@ -372,7 +372,7 @@ Results: {json.dumps(scan_results, indent=2)}"""
         
         client = _get_client()
         response = client.chat.completions.create(
-            model="deepseek-ai/deepseek-v3.2",
+            model="deepseek-ai/deepseek-r1",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.5,
             max_tokens=1500,
@@ -409,7 +409,7 @@ Format: Return a JSON array with "question" and "category" fields."""
         
         client = _get_client()
         response = client.chat.completions.create(
-            model="deepseek-ai/deepseek-v3.2",
+            model="deepseek-ai/deepseek-r1",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.6,
             max_tokens=1000,

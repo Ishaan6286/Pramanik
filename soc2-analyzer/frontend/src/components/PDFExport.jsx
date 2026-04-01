@@ -15,11 +15,24 @@ export default function PDFExport({ data }) {
     const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
     const period = `${new Date(Date.now() - 180 * 86400000).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} to ${date}`;
 
-    // Framework scores
+    // Framework scores — dynamic based on what's in data
     const fw = data.framework_scores || {};
-    const soc2Score = fw.soc2?.score || data.score;
-    const isoScore = fw.iso27001?.score || 0;
-    const hipaaScore = fw.hipaa?.score || 0;
+    const soc2Score  = fw.soc2?.score     || (fw.soc2     ? data.score : 0);
+    const isoScore   = fw.iso27001?.score || 0;
+    const hipaaScore = fw.hipaa?.score    || 0;
+    const dpdpScore  = fw.dpdp?.score     || 0;
+
+    // Build list of ACTIVE frameworks (only those present in data)
+    const activeFrameworks = [];
+    if (fw.soc2)     activeFrameworks.push({ key: "soc2",     name: "SOC 2",       score: soc2Score,  passed: fw.soc2?.passed  || 0, total: fw.soc2?.total  || 0 });
+    if (fw.iso27001) activeFrameworks.push({ key: "iso27001", name: "ISO 27001",   score: isoScore,   passed: fw.iso27001?.passed || 0, total: fw.iso27001?.total || 0 });
+    if (fw.hipaa)    activeFrameworks.push({ key: "hipaa",    name: "HIPAA",        score: hipaaScore, passed: fw.hipaa?.passed || 0, total: fw.hipaa?.total || 0 });
+    if (fw.dpdp)     activeFrameworks.push({ key: "dpdp",     name: "DPDP Act",     score: dpdpScore,  passed: fw.dpdp?.passed  || 0, total: fw.dpdp?.total  || 0 });
+
+    // Framework names string for title e.g. "SOC 2 · ISO 27001 · DPDP Act"
+    const frameworkTitle = activeFrameworks.length > 0
+      ? activeFrameworks.map(f => f.name).join(" · ")
+      : "Multi-Framework";
 
     // ── Helpers ──────────────────────────────
 
@@ -27,7 +40,7 @@ export default function PDFExport({ data }) {
       pageNum++;
       doc.setFontSize(8);
       doc.setTextColor(150);
-      doc.text("ComplianceAI", margin, ph - 10);
+      doc.text("Pramanik", margin, ph - 10);
       doc.text(String(pageNum), pw - margin, ph - 10, { align: "right" });
     };
 
@@ -102,67 +115,120 @@ export default function PDFExport({ data }) {
     // COVER PAGE
     // ══════════════════════════════════════════
 
+    // Dark background
     doc.setFillColor(15, 23, 42);
     doc.rect(0, 0, pw, ph, "F");
 
+    // ── Top brand bar ──
+    doc.setFillColor(25, 35, 58);
+    doc.rect(0, 0, pw, 18, "F");
     doc.setFontSize(10);
-    doc.setTextColor(41, 98, 255);
+    doc.setTextColor(79, 172, 154);   // muted teal
     doc.setFont("helvetica", "bold");
-    doc.text("ComplianceAI", margin, 30);
-
-    doc.setFontSize(36);
-    doc.setTextColor(255, 255, 255);
-    doc.text("SOC 2\u00AE Type 2", margin, 80);
-
-    doc.setFontSize(36);
-    doc.text("Compliance", margin, 95);
-    doc.text("Assessment", margin, 110);
-
-    doc.setFontSize(11);
-    doc.setTextColor(148, 163, 184);
+    doc.text("Pramanik", margin, 12);
+    doc.setFontSize(8);
+    doc.setTextColor(100, 120, 150);
     doc.setFont("helvetica", "normal");
+    doc.text("Autonomous Trust Platform", margin + 30, 12);
+
+    // ── Framework badge row (small pills) ──
+    let bx = margin;
+    const by = 32;
+    activeFrameworks.forEach((f) => {
+      doc.setFillColor(41, 98, 255, 0.15);   // blue tint
+      doc.setFillColor(30, 50, 90);
+      doc.roundedRect(bx, by - 6, 28, 9, 2, 2, "F");
+      doc.setFontSize(7);
+      doc.setTextColor(100, 160, 255);
+      doc.setFont("helvetica", "bold");
+      doc.text(f.name, bx + 4, by);
+      bx += 32;
+    });
+
+    // ── Main headline ──
+    // Line 1: "Compliance Assessment"
+    doc.setFontSize(32);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.text("Compliance", margin, 65);
+    doc.text("Assessment", margin, 83);
+
+    // Line 2: framework names (smaller, teal accent)
+    doc.setFontSize(13);
+    doc.setTextColor(79, 172, 154);
+    doc.setFont("helvetica", "normal");
+    const fwLine = doc.splitTextToSize(frameworkTitle, contentWidth);
+    fwLine.forEach((line, i) => {
+      doc.text(line, margin, 96 + i * 8);
+    });
+
+    // ── Subtitle ──
+    doc.setFontSize(9.5);
+    doc.setTextColor(100, 120, 150);
+    doc.setFont("helvetica", "normal");
+    const subtitleY = 96 + fwLine.length * 8 + 10;
     const subtitle = doc.splitTextToSize(
       `Report on ${company}'s Description of Its AWS Infrastructure and on the Suitability of the Design and Operating Effectiveness of Its Controls Relevant to Security, Availability, Processing Integrity, Confidentiality, and Privacy Trust Services Criteria Throughout the Period ${period}.`,
       contentWidth
     );
     subtitle.forEach((line, i) => {
-      doc.text(line, margin, 130 + i * 6);
+      doc.text(line, margin, subtitleY + i * 5.5);
     });
 
-    // Cover score summary
-    doc.setFillColor(30, 41, 59);
-    doc.roundedRect(margin, 180, contentWidth, 50, 3, 3, "F");
+    // ── Horizontal rule ──
+    const ruleY = subtitleY + subtitle.length * 5.5 + 8;
+    doc.setDrawColor(40, 60, 100);
+    doc.setLineWidth(0.4);
+    doc.line(margin, ruleY, pw - margin, ruleY);
 
-    doc.setFontSize(28);
+    // ── Score summary box — dynamic columns ──
+    const boxY = ruleY + 8;
+    const boxH = 52;
+    doc.setFillColor(25, 38, 62);
+    doc.roundedRect(margin, boxY, contentWidth, boxH, 4, 4, "F");
+    doc.setDrawColor(40, 65, 110);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(margin, boxY, contentWidth, boxH, 4, 4, "S");
+
+    // Column 1: Overall Score
+    doc.setFontSize(26);
     doc.setTextColor(41, 98, 255);
     doc.setFont("helvetica", "bold");
-    doc.text(`${data.score}%`, margin + 15, 207);
-    doc.setFontSize(9);
-    doc.setTextColor(148, 163, 184);
-    doc.text("Overall Score", margin + 15, 215);
+    doc.text(`${data.score}%`, margin + 12, boxY + 28);
+    doc.setFontSize(8);
+    doc.setTextColor(100, 120, 150);
+    doc.setFont("helvetica", "normal");
+    doc.text("OVERALL SCORE", margin + 12, boxY + 38);
 
-    doc.setFontSize(14);
+    // Column 2: Controls Passed
+    doc.setFontSize(18);
     doc.setTextColor(255, 255, 255);
-    doc.text(`${data.passed}/${data.total}`, margin + 70, 207);
-    doc.setFontSize(9);
-    doc.setTextColor(148, 163, 184);
-    doc.text("Controls Passed", margin + 70, 215);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${data.passed}/${data.total}`, margin + 58, boxY + 28);
+    doc.setFontSize(8);
+    doc.setTextColor(100, 120, 150);
+    doc.setFont("helvetica", "normal");
+    doc.text("CONTROLS PASSED", margin + 58, boxY + 38);
 
-    const frameworks = [
-      { name: "SOC 2", score: soc2Score },
-      { name: "ISO 27001", score: isoScore },
-      { name: "HIPAA", score: hipaaScore },
-    ];
-    frameworks.forEach((fw, i) => {
-      const x = margin + 130 + i * 30;
-      doc.setFontSize(12);
+    // Dynamic framework columns
+    const colStart = 115;
+    const colSpacing = activeFrameworks.length > 0 ? Math.min(35, (contentWidth - colStart + 10) / activeFrameworks.length) : 35;
+    activeFrameworks.forEach((f, i) => {
+      const cx = margin + colStart + i * colSpacing;
+      // Divider
+      doc.setDrawColor(40, 65, 110);
+      doc.setLineWidth(0.3);
+      doc.line(cx - 4, boxY + 10, cx - 4, boxY + boxH - 10);
+      // Score
+      doc.setFontSize(14);
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
-      doc.text(`${fw.score}%`, x, 207);
-      doc.setFontSize(8);
-      doc.setTextColor(148, 163, 184);
+      doc.text(`${f.score}%`, cx, boxY + 28);
+      // Label
+      doc.setFontSize(7.5);
+      doc.setTextColor(100, 120, 150);
       doc.setFont("helvetica", "normal");
-      doc.text(fw.name, x, 215);
+      doc.text(f.name.toUpperCase(), cx, boxY + 38);
     });
 
     addFooter();
@@ -561,7 +627,7 @@ export default function PDFExport({ data }) {
     y += 15;
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`Generated by ComplianceAI on ${date}`, pw / 2, y, { align: "center" });
+    doc.text(`Generated by Pramanik on ${date}`, pw / 2, y, { align: "center" });
     y += 8;
     doc.setFontSize(8);
     doc.setTextColor(150);
@@ -569,17 +635,19 @@ export default function PDFExport({ data }) {
     y += 5;
     doc.text("It does not constitute a formal SOC 2 Type II auditor's opinion.", pw / 2, y, { align: "center" });
 
-    // Save
-    doc.save(`${company.replace(/\s+/g, "_")}_SOC2_Compliance_Report.pdf`);
+    // Build filename based on active frameworks
+    const fwSlug = activeFrameworks.length > 0
+      ? activeFrameworks.map(f => f.key.toUpperCase()).join("_")
+      : "MULTI";
+    doc.save(`${company.replace(/\s+/g, "_")}_${fwSlug}_Compliance_Report.pdf`);
   };
 
   return (
     <button
       onClick={generatePDF}
-      className="px-4 py-2 rounded-lg font-medium text-sm text-white flex items-center gap-2"
-      style={{ background: "#ef4444" }}
+      className="btn-primary flex items-center gap-2 text-[13px]"
     >
-      <Download className="w-4 h-4" />
+      <Download className="w-3.5 h-3.5" />
       Export PDF
     </button>
   );
