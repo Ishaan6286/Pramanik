@@ -57,6 +57,7 @@ function AppContent() {
             setLoading={setLoading}
             user={user}
             onLogout={handleLogout}
+            onBack={() => setPage("landing")}
           />
           <ChatLauncher />
         </>

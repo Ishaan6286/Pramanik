@@ -10,7 +10,13 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     localStorage.setItem("soc2-theme", dark ? "dark" : "light");
-    document.documentElement.className = dark ? "" : "light";
+    if (dark) {
+      document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+    } else {
+      document.documentElement.classList.add("light");
+      document.documentElement.classList.remove("dark");
+    }
   }, [dark]);
 
   return (

@@ -1,0 +1,144 @@
+/* ─────────────────────────────────────────────
+   Radiant Beams background
+   Fixed, full-page, dark-mode only, decorative.
+   Pure CSS — zero JS animation, zero deps.
+───────────────────────────────────────────── */
+
+.beam-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: transparent;
+}
+
+/* Subtle grain overlay via data-uri SVG */
+.beam-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 180px;
+}
+
+/* Each beam is a wide rotated rectangle with a gradient */
+.beam {
+  position: absolute;
+  border-radius: 0;
+  transform-origin: center center;
+  will-change: transform, opacity;
+}
+
+/* ── Beam 1 — upper-left diagonal, teal tint ── */
+.beam-1 {
+  top:   -30%;
+  left:  -20%;
+  width:  55%;
+  height: 200%;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(45, 212, 191, 0.022) 30%,
+    rgba(45, 212, 191, 0.055) 50%,
+    rgba(45, 212, 191, 0.022) 70%,
+    transparent 100%
+  );
+  transform: rotate(-35deg);
+  animation: beam1drift 18s ease-in-out infinite alternate;
+}
+
+/* ── Beam 2 — upper-right diagonal ── */
+.beam-2 {
+  top:   -20%;
+  right: -25%;
+  width:  50%;
+  height: 200%;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(52, 211, 153, 0.018) 30%,
+    rgba(52, 211, 153, 0.048) 50%,
+    rgba(52, 211, 153, 0.018) 70%,
+    transparent 100%
+  );
+  transform: rotate(30deg);
+  animation: beam2drift 22s ease-in-out infinite alternate;
+}
+
+/* ── Beam 3 — center sweeping beam (brightest) ── */
+.beam-3 {
+  top:   -10%;
+  left:   15%;
+  width:  40%;
+  height: 180%;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(103, 232, 249, 0.015) 25%,
+    rgba(103, 232, 249, 0.055) 50%,
+    rgba(103, 232, 249, 0.015) 75%,
+    transparent 100%
+  );
+  transform: rotate(-18deg);
+  animation: beam3drift 26s ease-in-out infinite alternate;
+}
+
+/* ── Beam 4 — lower accent ── */
+.beam-4 {
+  bottom: -30%;
+  left:    40%;
+  width:   45%;
+  height:  160%;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(45, 212, 191, 0.012) 30%,
+    rgba(45, 212, 191, 0.038) 50%,
+    rgba(45, 212, 191, 0.012) 70%,
+    transparent 100%
+  );
+  transform: rotate(40deg);
+  animation: beam4drift 30s ease-in-out infinite alternate;
+}
+
+/* ── Beam 5 — wide faint sweep from top ── */
+.beam-5 {
+  top:  -40%;
+  left: -10%;
+  width: 65%;
+  height: 220%;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(165, 243, 252, 0.01) 35%,
+    rgba(165, 243, 252, 0.032) 50%,
+    rgba(165, 243, 252, 0.01) 65%,
+    transparent 100%
+  );
+  transform: rotate(-50deg);
+  animation: beam5drift 35s ease-in-out infinite alternate;
+}
+
+/* ─── Drift keyframes ─────────────────────── */
+@keyframes beam1drift {
+  0%   { transform: rotate(-35deg) translateX(-8%); opacity: 0.7; }
+  100% { transform: rotate(-28deg) translateX(8%);  opacity: 1; }
+}
+@keyframes beam2drift {
+  0%   { transform: rotate(30deg)  translateX(6%);  opacity: 0.6; }
+  100% { transform: rotate(22deg)  translateX(-6%); opacity: 0.95; }
+}
+@keyframes beam3drift {
+  0%   { transform: rotate(-18deg) translateX(-5%); opacity: 0.8; }
+  100% { transform: rotate(-10deg) translateX(5%);  opacity: 1; }
+}
+@keyframes beam4drift {
+  0%   { transform: rotate(40deg)  translateX(4%);  opacity: 0.5; }
+  100% { transform: rotate(32deg)  translateX(-4%); opacity: 0.85; }
+}
+@keyframes beam5drift {
+  0%   { transform: rotate(-50deg) translateX(-6%); opacity: 0.6; }
+  100% { transform: rotate(-42deg) translateX(6%);  opacity: 0.9; }
+}

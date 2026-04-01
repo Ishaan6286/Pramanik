@@ -1,18 +1,16 @@
 import { useState, useEffect } from "react";
-import { MessageCircle, X } from "lucide-react";
+import { X, Bot, Sparkles } from "lucide-react";
 import PopupChatPanel from "./PopupChatPanel";
 import "./ChatLauncher.css";
 
 export default function ChatLauncher() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [hasNew, setHasNew] = useState(false);
+  const [isOpen, setIsOpen]   = useState(false);
+  const [hasNew, setHasNew]   = useState(false);
+  const [hovered, setHovered] = useState(false);
 
-  // Close on ESC key
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === "Escape" && isOpen) {
-        setIsOpen(false);
-      }
+      if (e.key === "Escape" && isOpen) setIsOpen(false);
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -20,24 +18,43 @@ export default function ChatLauncher() {
 
   return (
     <>
-      {/* Floating Launcher Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="chat-launcher-btn"
-        title="Open Compliance Assistant"
-        aria-label="Open chat"
-      >
-        {isOpen ? (
-          <X size={20} />
-        ) : (
-          <>
-            <MessageCircle size={20} />
-            {hasNew && <span className="chat-notification-dot"></span>}
-          </>
-        )}
-      </button>
+      {/* ── Floating Button ── */}
+      <div className="chat-launcher-wrap">
 
-      {/* Popup Chat Panel */}
+        {/* Tooltip pill — slides in on hover */}
+        <div className={`chat-tooltip ${hovered && !isOpen ? "chat-tooltip--visible" : ""}`}>
+          <Sparkles size={11} />
+          Ask Pramanik AI
+        </div>
+
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          className={`chat-launcher-btn ${isOpen ? "chat-launcher-btn--open" : ""}`}
+          aria-label="Open compliance chat"
+        >
+          {/* Glow rings */}
+          <span className="chat-ring chat-ring-1" />
+          <span className="chat-ring chat-ring-2" />
+
+          {/* Icon */}
+          <span className="chat-icon-wrap">
+            {isOpen
+              ? <X size={20} strokeWidth={2.5} />
+              : <Bot size={22} strokeWidth={1.8} />
+            }
+          </span>
+
+          {/* Live dot */}
+          {!isOpen && <span className="chat-live-dot" />}
+
+          {/* Notification badge */}
+          {hasNew && !isOpen && <span className="chat-notification-dot" />}
+        </button>
+      </div>
+
+      {/* ── Popup Panel ── */}
       {isOpen && (
         <div className="chat-popup-overlay" onClick={() => setIsOpen(false)}>
           <div className="chat-popup-container" onClick={(e) => e.stopPropagation()}>

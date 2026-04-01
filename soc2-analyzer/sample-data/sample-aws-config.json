@@ -5,38 +5,38 @@
   "region": "ap-south-1",
 
   "organization": {
-    "security_officer_assigned": false,
-    "security_policy_exists": false,
-    "board_oversight": false,
-    "background_checks": false,
-    "security_training": false,
-    "acceptable_use_policy": false,
-    "security_communication_plan": false,
-    "incident_reporting_process": false,
+    "security_officer_assigned": true,
+    "security_policy_exists": true,
+    "board_oversight": true,
+    "background_checks": true,
+    "security_training": true,
+    "acceptable_use_policy": true,
+    "security_communication_plan": true,
+    "incident_reporting_process": true,
     "privacy_policy_published": true,
-    "security_page_published": false,
-    "breach_notification_process": false,
-    "risk_register": false,
-    "threat_model": false,
-    "remediation_tracking": false,
-    "control_documentation": false,
-    "change_management_process": false,
-    "output_validation": false,
-    "data_processing_agreement": false,
-    "consent_management": false,
-    "data_subject_request_process": false,
-    "retention_policy": false,
-    "cross_border_transfer_policy": false
+    "security_page_published": true,
+    "breach_notification_process": true,
+    "risk_register": true,
+    "threat_model": true,
+    "remediation_tracking": true,
+    "control_documentation": true,
+    "change_management_process": true,
+    "output_validation": true,
+    "data_processing_agreement": true,
+    "consent_management": true,
+    "data_subject_request_process": true,
+    "retention_policy": true,
+    "cross_border_transfer_policy": true
   },
 
   "iam": {
-    "mfa_enabled": false,
+    "mfa_enabled": true,
     "users": [
       {
         "username": "admin",
-        "mfa_active": false,
-        "last_used": "2024-01-15",
-        "access_keys": 2
+        "mfa_active": true,
+        "last_used": "2024-03-15",
+        "access_keys": 1
       },
       {
         "username": "developer1",
@@ -46,33 +46,33 @@
       },
       {
         "username": "intern-temp",
-        "mfa_active": false,
+        "mfa_active": true,
         "last_used": "2023-06-01",
         "access_keys": 1
       }
     ],
     "password_policy": {
-      "minimum_length": 8,
-      "require_uppercase": false,
+      "minimum_length": 14,
+      "require_uppercase": true,
       "require_numbers": true,
-      "require_symbols": false,
-      "max_password_age": 180
+      "require_symbols": true,
+      "max_password_age": 90
     },
-    "root_account_mfa": false,
-    "roles_defined": false
+    "root_account_mfa": true,
+    "roles_defined": true
   },
 
   "s3": {
     "buckets": [
       {
         "name": "user-uploads-prod",
-        "encryption": false,
-        "public_access": true,
-        "versioning": false,
-        "logging": false,
-        "enforce_ssl": false,
-        "classification_tag": false,
-        "lifecycle_policy": false
+        "encryption": true,
+        "public_access": false,
+        "versioning": true,
+        "logging": true,
+        "enforce_ssl": true,
+        "classification_tag": true,
+        "lifecycle_policy": true
       },
       {
         "name": "company-backups",
@@ -86,84 +86,83 @@
       },
       {
         "name": "customer-data-analytics",
-        "encryption": false,
+        "encryption": true,
         "public_access": false,
-        "versioning": false,
-        "logging": false,
-        "enforce_ssl": false,
-        "classification_tag": false,
-        "lifecycle_policy": false
+        "versioning": true,
+        "logging": true,
+        "enforce_ssl": true,
+        "classification_tag": true,
+        "lifecycle_policy": true
       }
     ]
   },
 
   "cloudtrail": {
-    "enabled": false,
-    "multi_region": false,
-    "log_validation": false,
-    "data_events": false
+    "enabled": true,
+    "multi_region": true,
+    "log_validation": true,
+    "data_events": true
   },
 
   "rds": {
     "instances": [
       {
         "name": "production-db",
-        "encryption": false,
+        "encryption": true,
         "backup_enabled": true,
-        "backup_retention_days": 7,
-        "publicly_accessible": true,
-        "multi_az": false
+        "backup_retention_days": 30,
+        "publicly_accessible": false,
+        "multi_az": true
       }
     ]
   },
 
   "vpc": {
-    "flow_logs_enabled": false,
+    "flow_logs_enabled": true,
     "security_groups": [
       {
         "name": "default",
         "inbound_rules": [
-          { "port": 22, "source": "0.0.0.0/0" },
-          { "port": 3306, "source": "0.0.0.0/0" }
+          { "port": 443, "source": "10.0.0.0/8" }
         ]
       }
     ]
   },
 
-  "guardduty": { "enabled": false },
-  "config_service": { "enabled": false, "rules_configured": false },
-  "security_hub": { "enabled": false },
-  "inspector": { "enabled": false },
-  "macie": { "enabled": false },
-  "kms": { "keys_configured": false },
-  "waf": { "enabled": false },
-  "shield": { "enabled": false },
-  "trusted_advisor": { "enabled": false },
-  "access_analyzer": { "enabled": false },
+  "guardduty": { "enabled": true },
+  "config_service": { "enabled": true, "rules_configured": true },
+  "security_hub": { "enabled": true },
+  "inspector": { "enabled": true },
+  "macie": { "enabled": true },
+  "kms": { "keys_configured": true },
+  "waf": { "enabled": true },
+  "shield": { "enabled": true },
+  "trusted_advisor": { "enabled": true },
+  "access_analyzer": { "enabled": true },
   "cloudfront": { "https_enforced": true },
   "elb": { "ssl_enabled": true },
-  "autoscaling": { "enabled": false },
-  "systems_manager": { "patch_compliance": false },
-  "api_gateway": { "request_validation": false },
-  "xray": { "enabled": false },
-  "sns": { "security_alerts_configured": false },
+  "autoscaling": { "enabled": true },
+  "systems_manager": { "patch_compliance": true },
+  "api_gateway": { "request_validation": true },
+  "xray": { "enabled": true },
+  "sns": { "security_alerts_configured": true },
   "cloudwatch": {
-    "alarm_configured": false,
-    "log_groups_configured": false
+    "alarm_configured": true,
+    "log_groups_configured": true
   },
-  "route53": { "health_checks": false },
-  "codepipeline": { "enabled": false },
+  "route53": { "health_checks": true },
+  "codepipeline": { "enabled": true },
 
   "incident_response": {
-    "plan_exists": false,
-    "contact_list": false,
-    "runbooks": false
+    "plan_exists": true,
+    "contact_list": true,
+    "runbooks": true
   },
 
   "disaster_recovery": {
-    "plan_exists": false,
-    "cross_region_backup": false,
-    "rto_defined": false,
-    "rpo_defined": false
+    "plan_exists": true,
+    "cross_region_backup": true,
+    "rto_defined": true,
+    "rpo_defined": true
   }
 }

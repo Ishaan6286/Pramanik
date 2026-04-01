@@ -3,32 +3,32 @@ const FRAMEWORKS = [
     key: "soc2",
     label: "SOC 2",
     subtitle: "Trust Service Criteria",
-    color: "#6366f1",
-    bg: "#6366f115",
+    color: "hsl(220, 35%, 62%)",
+    bg: "hsla(220, 35%, 62%, 0.10)",
     description: "AICPA framework for security, availability, and confidentiality",
   },
   {
     key: "iso27001",
     label: "ISO 27001",
     subtitle: "Annex A Controls",
-    color: "#22c55e",
-    bg: "#22c55e15",
+    color: "hsl(155, 28%, 56%)",
+    bg: "hsla(155, 28%, 56%, 0.10)",
     description: "International standard for information security management systems",
   },
   {
     key: "hipaa",
     label: "HIPAA",
     subtitle: "Security Rule",
-    color: "#f97316",
-    bg: "#f9731615",
+    color: "hsl(28, 45%, 60%)",
+    bg: "hsla(28, 45%, 60%, 0.10)",
     description: "US federal law protecting health information and ePHI",
   },
   {
     key: "dpdp",
     label: "DPDP Act",
     subtitle: "India 2023",
-    color: "#ec4899",
-    bg: "#ec489915",
+    color: "hsl(330, 30%, 64%)",
+    bg: "hsla(330, 30%, 64%, 0.10)",
     description: "India's Digital Personal Data Protection Act — consent, breach notification, data principal rights",
   },
 ];
@@ -73,7 +73,7 @@ export default function FrameworkScores({ frameworkScores }) {
           if (!data) return null;
           const score = data.score;
           const status = score >= 70 ? "On Track" : score >= 40 ? "Needs Work" : "At Risk";
-          const statusColor = score >= 70 ? "#22c55e" : score >= 40 ? "#eab308" : "#ef4444";
+          const statusColor = score >= 70 ? "hsl(155, 28%, 56%)" : score >= 40 ? "hsl(45, 35%, 56%)" : "hsl(2, 45%, 62%)";
 
           return (
             <div
@@ -100,11 +100,11 @@ export default function FrameworkScores({ frameworkScores }) {
 
               <div className="w-full flex justify-between text-sm">
                 <div className="text-center">
-                  <div className="font-bold text-green-500">{data.passed}</div>
+                  <div className="font-bold" style={{ color: "hsl(155, 28%, 56%)" }}>{data.passed}</div>
                   <div className="text-xs" style={{ color: "var(--text-muted)" }}>Passed</div>
                 </div>
                 <div className="text-center">
-                  <div className="font-bold text-red-500">{data.total - data.passed}</div>
+                  <div className="font-bold" style={{ color: "hsl(2, 45%, 62%)" }}>{data.total - data.passed}</div>
                   <div className="text-xs" style={{ color: "var(--text-muted)" }}>Failed</div>
                 </div>
                 <div className="text-center">

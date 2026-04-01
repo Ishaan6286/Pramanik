@@ -1,80 +1,171 @@
+/* ─── Google Fonts — Custom Matrix ─── */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Theme variables */
-:root {
-  --bg-primary: #0a0a0f;
-  --bg-secondary: #111118;
-  --bg-card: #16161f;
-  --bg-hover: #1e1e2a;
-  --text-primary: #f0f0f5;
-  --text-secondary: #9090a0;
-  --text-muted: #606070;
-  --border: #2a2a35;
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
+/* ─── Pastel Aqua / Emerald Palette ─── */
+@layer base {
+  :root {
+    /* Foundation - Pastel Off-White */
+    --col-bg:       160 20% 98%;      /* Very soft minty off-white */
+    --col-surface:  0 0% 100%;        /* Pure White */
+    --col-raise:    0 0% 100%;
+    --col-border:   160 15% 90%;      /* Soft teal-tinted separator */
+    
+    /* Brand Primary - Pastel Aqua & Emerald */
+    --col-primary:  175 35% 44%;      /* Pastel aqua */
+    --col-accent:   150 30% 46%;      /* Pastel green */
+    
+    /* Text Hierarchy (Dark on Light) */
+    --col-text:     180 30% 15%;      /* Deep Slate/Teal Black */
+    --col-muted:    170 15% 45%;      /* Muted Teal Gray */
+    --col-sub:      175 20% 35%;      /* Dark Teal Gray */
+    
+    /* Legacy Aliases */
+    --accent:         hsl(var(--col-primary));
+    --text-primary:   hsl(var(--col-text));
+    --text-secondary: hsl(var(--col-sub));
+    --text-muted:     hsl(var(--col-muted));
+    --bg-primary:     hsl(var(--col-bg));
+    --bg-secondary:   hsl(var(--col-surface));
+    --bg-hover:       hsl(var(--col-primary) / 0.05);
+    --border:         hsl(var(--col-border));
+  }
+
+  .dark {
+    /* Foundation — Deep Slate (far easier on eyes than pure black) */
+    --col-bg:       222 18% 9%;        /* Deep navy-slate */
+    --col-surface:  222 18% 12%;       /* Slightly lifted */
+    --col-raise:    222 15% 16%;       /* Card surfaces */
+    --col-border:   222 15% 22%;       /* Smooth separators */
+
+    /* Brand — keep vivid so they pop against dark backgrounds */
+    --col-primary:  175 60% 50%;       /* Vibrant teal */
+    --col-accent:   150 55% 50%;       /* Vibrant emerald */
+
+    /* Text — softened off-white for zero eye-strain */
+    --col-text:     210 20% 92%;       /* Warm off-white */
+    --col-sub:      210 15% 72%;       /* Secondary text */
+    --col-muted:    210 10% 52%;       /* Tertiary / labels */
+
+    /* Legacy aliases */
+    --bg-primary:     hsl(var(--col-bg));
+    --bg-secondary:   hsl(var(--col-surface));
+    --bg-hover:       hsl(var(--col-primary) / 0.08);
+    --border:         hsl(var(--col-border));
+    --text-primary:   hsl(var(--col-text));
+    --text-secondary: hsl(var(--col-sub));
+    --text-muted:     hsl(var(--col-muted));
+    --accent:         hsl(var(--col-primary));
+  }
+
+  * {
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.015em;
+  }
+
+  body {
+    background-color: hsl(var(--col-bg));
+    color: hsl(var(--col-text));
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 15px; 
+  }
 }
 
-.light {
-  --bg-primary: #f8f9fc;
-  --bg-secondary: #ffffff;
-  --bg-card: #ffffff;
-  --bg-hover: #f1f3f8;
-  --text-primary: #111118;
-  --text-secondary: #555566;
-  --text-muted: #888899;
-  --border: #e2e4ea;
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
+/* ─── Precise Components ─── */
+@layer components {
+  /* Using Inter for display instead of Playfair */
+  .font-display { font-family: 'Inter', sans-serif; letter-spacing: -0.03em; }
+  .font-mono    { font-family: 'JetBrains Mono', monospace; }
+
+  .surface {
+    background: hsl(var(--col-surface));
+    border: 1px solid hsl(var(--col-border));
+    transition: all 0.2s ease;
+  }
+  
+  .surface-raise {
+    background: hsl(var(--col-raise));
+    border: 1px solid hsl(var(--col-border));
+    box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+  }
+  
+  .glass {
+    background: hsla(0, 0%, 100%, 0.72);
+    border: 1px solid hsl(var(--col-border));
+    backdrop-filter: blur(12px);
+  }
+
+  .dark .glass {
+    background: hsla(222, 18%, 14%, 0.85);
+    border: 1px solid hsl(var(--col-border));
+    backdrop-filter: blur(16px);
+  }
+
+  /* ── Clean Buttons ── */
+  .btn-primary {
+    --color: hsl(var(--col-primary));
+    --color2: hsl(var(--col-text));
+    padding: 0.8em 1.75em;
+    background-color: hsl(var(--col-primary) / 0.10);
+    border-radius: 999px;
+    border: 1px solid hsl(var(--col-primary) / 0.22);
+    transition: 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    z-index: 1;
+    font-weight: 600;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: hsl(var(--col-primary));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .btn-primary:hover {
+    background-color: hsl(var(--col-primary) / 0.14);
+    border-color: hsl(var(--col-primary) / 0.28);
+  }
+
+  .btn-primary:active {
+    transform: scale(.98);
+  }
+
+  .btn-secondary {
+    @apply relative inline-flex items-center justify-center gap-2 font-semibold text-[hsl(var(--col-text))]
+           rounded-full border border-[hsl(var(--col-border))] bg-white px-6 py-3
+           transition-colors hover:bg-teal-50/50;
+  }
+
+  /* ── Background Patterns ── */
+  .bg-pattern-plus {
+    background-image: 
+      radial-gradient(circle at 12px 12px, hsl(var(--col-primary) / 0.15) 2px, transparent 2px),
+      linear-gradient(0deg, transparent 23px, hsl(var(--col-primary) / 0.08) 23px, hsl(var(--col-primary) / 0.08) 25px, transparent 25px),
+      linear-gradient(90deg, transparent 23px, hsl(var(--col-primary) / 0.08) 23px, hsl(var(--col-primary) / 0.08) 25px, transparent 25px);
+    background-size: 48px 48px;
+  }
 }
 
-body {
-  background: var(--bg-primary);
-  color: var(--text-primary);
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
-
-/* Smooth transitions */
-* {
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+  display: flex;
 }
-
-/* Custom scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg-primary); }
-::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #555; }
-.light ::-webkit-scrollbar-thumb { background: #ccc; }
-
-/* Score ring animation */
-@keyframes scoreReveal {
-  from { stroke-dashoffset: 283; }
+.animate-marquee:hover {
+  animation-play-state: paused;
 }
-.score-ring {
-  animation: scoreReveal 1.2s ease-out forwards;
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
-
-/* Fade in */
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.fade-in { animation: fadeInUp 0.5s ease-out forwards; }
-.fade-in-d1 { animation: fadeInUp 0.5s ease-out 0.1s forwards; opacity: 0; }
-.fade-in-d2 { animation: fadeInUp 0.5s ease-out 0.2s forwards; opacity: 0; }
-.fade-in-d3 { animation: fadeInUp 0.5s ease-out 0.3s forwards; opacity: 0; }
-.fade-in-d4 { animation: fadeInUp 0.5s ease-out 0.4s forwards; opacity: 0; }
-
-/* Gradient text */
-.gradient-text {
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-/* Glass card */
-.glass {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
+.animate-spin-slow {
+  animation: spin-slow 12s linear infinite;
 }

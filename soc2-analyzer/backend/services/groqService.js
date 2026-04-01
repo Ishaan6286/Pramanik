@@ -47,16 +47,26 @@ Format your response as a JSON array like this:
 
 Return ONLY the JSON array, no other text.`;
 
-  const response = await getGroqClient().chat.completions.create({
-    model: "llama-3.3-70b-versatile",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.3,
-    max_tokens: 2000
-  });
+  try {
+    const response = await getGroqClient().chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.3,
+      max_tokens: 2000
+    });
 
-  const text = response.choices[0].message.content;
-  const clean = text.replace(/```json|```/g, '').trim();
-  return JSON.parse(clean);
+    const text = response.choices[0].message.content;
+    const clean = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(clean);
+  } catch (err) {
+    console.error('Groq AI API Error:', err.message);
+    return failedControls.map(c => ({
+      control_id: c.id,
+      risk_explanation: "AI explanation disabled due to API Rate Limit.",
+      fix_steps: ["Please try again in a few minutes.", "Check API quotas."],
+      business_impact: "Unable to generate AI insights right now."
+    }));
+  }
 }
 
 async function generatePolicies(awsConfig, companyName) {
