@@ -162,7 +162,7 @@ AUDIT_QUESTIONS: dict[str, list[str]] = {
 
 
 # Severity levels that should ALWAYS be flagged regardless of context
-ALWAYS_FLAG_PATTERNS = {"CRED-001", "CRED-002", "S3-001", "IAM-001", "SQLI-001", "NOSQL-001", "EVAL-001"}
+ALWAYS_FLAG_PATTERNS = {"CRED-001", "CRED-002", "S3-001", "IAM-001", "SQLI-001", "NOSQL-001", "EVAL-001", "JWT-001"}
 
 # Control categories for SOC 2 metrics
 CONTROL_CATEGORIES = {

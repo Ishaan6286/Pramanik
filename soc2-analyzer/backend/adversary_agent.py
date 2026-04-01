@@ -12,7 +12,6 @@ This means the tool always produces useful output even if AI is unavailable.
 
 import json
 import audit_memory
-import bedrock_service
 import groq_service
 
 
@@ -83,23 +82,19 @@ def challenge_findings(findings: list, repo_name: str = "Unknown") -> list:
         raw = None
 
         try:
-            raw = bedrock_service._call_bedrock(prompt, max_tokens=2500, temperature=0.2)
+            client = groq_service._get_client()
+            resp = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": "You are a strict SOC 2 Type 2 auditor. Return only valid JSON arrays. No markdown."},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.2,
+                max_tokens=2500,
+            )
+            raw = resp.choices[0].message.content
         except Exception as e:
-            print(f"Adversary: Bedrock failed ({e}), trying Groq")
-            try:
-                client = groq_service._get_client()
-                resp = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=[
-                        {"role": "system", "content": "You are a strict SOC 2 Type 2 auditor. Return only valid JSON arrays. No markdown."},
-                        {"role": "user", "content": prompt},
-                    ],
-                    temperature=0.2,
-                    max_tokens=2500,
-                )
-                raw = resp.choices[0].message.content
-            except Exception as e2:
-                print(f"Adversary: Groq also failed ({e2}), using rule-based only")
+            print(f"Adversary: Groq failed ({e}), using rule-based only")
 
         if raw:
             try:

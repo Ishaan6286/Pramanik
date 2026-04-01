@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Shield, ArrowLeft, BarChart3, FileText, TrendingUp, HelpCircle, LogOut, Zap, Globe, GitCompare } from "lucide-react";
+import { ArrowLeft, BarChart3, FileText, TrendingUp, HelpCircle, LogOut, Zap, Globe, GitCompare } from "lucide-react";
 import ControlCard from "./ControlCard";
 import PolicyViewer from "./PolicyViewer";
 import PDFExport from "./PDFExport";
@@ -29,8 +29,7 @@ export default function Dashboard({ data, config, onReset, user, onLogout }) {
           <button onClick={onReset} className="hover:opacity-70" style={{ color: "var(--text-secondary)" }}>
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <Shield className="w-5 h-5" style={{ color: "var(--accent)" }} />
-          <span className="font-bold">SOC2 Analyzer</span>
+          <img src="/logo.png" alt="ComplianceAI" style={{ height: 52, width: "auto", objectFit: "contain" }} />
           <span style={{ color: "var(--text-muted)" }}>|</span>
           <span style={{ color: "var(--text-secondary)" }} className="text-sm">{data.company_name}</span>
         </div>

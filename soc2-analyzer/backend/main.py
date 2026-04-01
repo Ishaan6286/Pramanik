@@ -20,9 +20,9 @@ import deepseek_service
 import github_agent
 import adversary_agent
 import audit_memory
+import agent_graph
 
 # AI services — Bedrock primary, Groq fallback
-import bedrock_service
 import groq_service
 import db
 
@@ -52,15 +52,10 @@ async def analyze(config: UploadFile = File(...)):
     explanations = []
     if failed:
         try:
-            explanations = bedrock_service.generate_explanations(failed, company_name)
-            print("AI explanations: used Bedrock")
+            explanations = groq_service.generate_explanations(failed, company_name)
+            print("AI explanations: used Groq")
         except Exception as e:
-            print(f"Bedrock explanations failed: {e}, falling back to Groq")
-            try:
-                explanations = groq_service.generate_explanations(failed, company_name)
-                print("AI explanations: used Groq fallback")
-            except Exception as e2:
-                print(f"Groq fallback also failed: {e2}")
+            print(f"Groq explanations failed: {e}")
 
     enriched = []
     for control in result["results"]:
@@ -151,14 +146,10 @@ async def scan_aws(req: AWSScanRequest):
         explanations = []
         if failed:
             try:
-                explanations = bedrock_service.generate_explanations(failed, company_name)
-                print("AI explanations: used Bedrock")
+                explanations = groq_service.generate_explanations(failed, company_name)
+                print("AI explanations: used Groq")
             except Exception as e:
-                print(f"Bedrock failed: {e}, falling back to Groq")
-                try:
-                    explanations = groq_service.generate_explanations(failed, company_name)
-                except Exception as e2:
-                    print(f"Groq also failed: {e2}")
+                print(f"Groq failed: {e}")
 
         enriched = []
         for control in result["results"]:
@@ -214,16 +205,11 @@ class PolicyRequest(BaseModel):
 @app.post("/api/policies")
 async def policies(req: PolicyRequest):
     try:
-        result = bedrock_service.generate_policies(req.company_name)
+        result = groq_service.generate_policies(req.company_name)
         return result
     except Exception as e:
-        print(f"Bedrock policies failed: {e}, falling back to Groq")
-        try:
-            result = groq_service.generate_policies(req.company_name)
-            return result
-        except Exception as e2:
-            print(f"Groq policies also failed: {e2}")
-            raise HTTPException(status_code=500, detail=f"Policy generation failed: {str(e2)}")
+        print(f"Groq policies failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Policy generation failed: {str(e)}")
 
 
 class AuditPrepRequest(BaseModel):
@@ -234,15 +220,11 @@ class AuditPrepRequest(BaseModel):
 @app.post("/api/audit-prep")
 async def audit_prep(req: AuditPrepRequest):
     try:
-        result = bedrock_service.generate_audit_questions(req.failed_controls, req.company_name)
+        result = groq_service.generate_audit_questions(req.failed_controls, req.company_name)
         return result
     except Exception as e:
-        print(f"Bedrock audit-prep failed: {e}, falling back to Groq")
-        try:
-            result = groq_service.generate_audit_questions(req.failed_controls, req.company_name)
-            return result
-        except Exception as e2:
-            raise HTTPException(status_code=500, detail=f"Audit prep failed: {str(e2)}")
+        print(f"Groq audit-prep failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Audit prep failed: {str(e)}")
 
 
 # ── DRIFT DETECTION ────────────────────────────────
@@ -492,70 +474,65 @@ def _github_findings_to_controls(findings: list, selected_frameworks: list) -> l
 
 @app.post("/api/scan-github")
 async def scan_github(req: GitHubScanRequest):
-    """Multi-agent GitHub repository compliance scanner."""
+    """Multi-agent GitHub repository compliance scanner — powered by LangGraph."""
     try:
-        # ── Agent 1 + 2: Code Agent + Policy Agent ──
-        print(f"GitHub scan starting: {req.repo_url}")
-        scan_result = github_agent.scan_repository(
+        print(f"[LangGraph] Starting multi-agent scan: {req.repo_url}")
+
+        # Run the full LangGraph agent pipeline
+        final_state = agent_graph.run_compliance_scan(
             repo_url=req.repo_url,
             token=req.token or None,
+            company_name=req.company_name,
+            selected_frameworks=req.selected_frameworks,
             max_files=150,
         )
 
-        findings = scan_result["findings"]
-        company_name = req.company_name or scan_result["repo"]
+        # Extract results from final graph state
+        scan_result = final_state.get("scan_result", {})
+        challenged = final_state.get("challenged", []) or final_state.get("findings", [])
+        full_metrics = final_state.get("full_metrics", {})
+        control_results = final_state.get("control_results", [])
 
-        # ── Agent 3: Adversary Agent (Stage 1: rule-based triage, Stage 2: AI) ──
-        print(f"Adversary agent: rule-based triage on {len(findings)} findings...")
-        challenged = adversary_agent.challenge_findings(findings, company_name)
+        severity_counts = full_metrics.get("severity_counts", {})
+        triage_counts = full_metrics.get("triage_counts", {})
 
-        # ── Full metrics (no AI, pure logic) ──
-        full_metrics = adversary_agent.get_full_metrics(challenged)
-
-        # ── Agent 4: CES Engine ──
-        control_results = _github_findings_to_controls(challenged, req.selected_frameworks)
-        priority_fixes = calculate_crvs(control_results)
-
-        # Framework scores (based on which controls failed)
-        framework_scores = get_framework_summary(control_results)
-
-        # Score: percentage of checked controls that passed
-        total_controls_checked = len(control_results)
-        total_reported = max(total_controls_checked, 1)
-        score = max(0, 100 - int((total_controls_checked / 33) * 100))
-
-        # Severity counts from adversary agent (includes triage)
-        severity_counts = full_metrics["severity_counts"]
-        triage_counts = full_metrics["triage_counts"]
+        total_reported = max(len(control_results), 1)
 
         response_data = {
-            "company_name": company_name,
-            "repo": scan_result["repo"],
-            "score": score,
+            "company_name": final_state.get("company_name", ""),
+            "repo": scan_result.get("repo", ""),
+            "score": final_state.get("score", 0),
             "passed": 0,
             "total": total_reported,
             "results": control_results,
-            "priority_fixes": priority_fixes,
-            "framework_scores": framework_scores,
+            "priority_fixes": final_state.get("priority_fixes", []),
+            "framework_scores": final_state.get("framework_scores", {}),
             "benchmark": None,
 
             # GitHub-specific extras
             "scan_source": "github",
-            "files_scanned": scan_result["files_scanned"],
-            "total_files": scan_result["total_files"],
+            "files_scanned": scan_result.get("files_scanned", 0),
+            "total_files": scan_result.get("total_files", 0),
             "raw_findings": challenged,
             "severity_counts": severity_counts,
             "triage_counts": triage_counts,
-            "policy_status": scan_result["policy_status"],
-            "trail_info": scan_result["trail_info"],
+            "policy_status": final_state.get("policy_status", {}),
+            "trail_info": final_state.get("trail_info", {}),
             "selected_frameworks": req.selected_frameworks,
 
-            # Full metrics package (no AI — always available)
-            "soc2_metrics": full_metrics["soc2_metrics"],
-            "framework_metrics": full_metrics["framework_metrics"],
-            "audit_questions_by_control": full_metrics["audit_questions_by_control"],
-            "total_audit_questions": full_metrics["total_audit_questions"],
+            # Full metrics package
+            "soc2_metrics": full_metrics.get("soc2_metrics", {}),
+            "framework_metrics": full_metrics.get("framework_metrics", {}),
+            "audit_questions_by_control": full_metrics.get("audit_questions_by_control", {}),
+            "total_audit_questions": full_metrics.get("total_audit_questions", 0),
+
+            # LangGraph agent trace — shows each node's decisions
+            "agent_trace": final_state.get("agent_trace", []),
         }
+
+        # Log the agent trace
+        for trace in final_state.get("agent_trace", []):
+            print(f"  [{trace['node']}] {trace['decision']} ({trace['duration_ms']}ms)")
 
         return response_data
 
@@ -634,15 +611,17 @@ async def github_webhook(payload: GitHubWebhookPayload):
         return {"skipped": True, "reason": f"Not a main/master push: {payload.ref}"}
 
     try:
-        scan_result = github_agent.scan_repository(
+        # Use LangGraph pipeline for webhook scans too
+        final_state = agent_graph.run_compliance_scan(
             repo_url=payload.repo_url,
             token=payload.token or None,
             max_files=100,
         )
 
-        findings = scan_result["findings"]
-        challenged = adversary_agent.challenge_findings(findings[:20], payload.repo_url)
-        full_metrics = adversary_agent.get_full_metrics(challenged)
+        scan_result = final_state.get("scan_result", {})
+        findings = final_state.get("findings", [])
+        challenged = final_state.get("challenged", []) or findings
+        full_metrics = final_state.get("full_metrics", {})
 
         critical_count = full_metrics["severity_counts"].get("CRITICAL", 0)
         immediate_count = full_metrics["triage_counts"].get("IMMEDIATE_ACTION", 0)
