@@ -219,11 +219,11 @@ COMPLIANCE_PATTERNS = [
     {
         "id": "CSRF-001",
         "name": "Missing CSRF Protection",
-        "pattern": r'app\.(post|put|delete|patch)\s*\(["\'][^"\']+["\']|router\.(post|put|delete|patch)\s*\(',
+        "pattern": r'app\.(post|put|delete|patch)\s*\(["\'][^"\']*(?:login|signup|register|checkout|payment|transfer|account|profile|settings)[^"\']*["\']',
         "controls": ["CC6.8", "CC5.2"],
         "frameworks": ["soc2", "iso27001"],
         "severity": "HIGH",
-        "message": "State-changing route detected — verify CSRF protection (csurf/csrf-csrf) is applied.",
+        "message": "Sensitive state-changing route without visible CSRF protection — session riding attack possible.",
         "fix": "Add csurf or csrf-csrf middleware. Validate CSRF token on all POST/PUT/DELETE routes.",
     },
     {
@@ -239,11 +239,11 @@ COMPLIANCE_PATTERNS = [
     {
         "id": "HEADER-001",
         "name": "Missing Security Headers (No Helmet)",
-        "pattern": r'require\s*\(["\']express["\']\)|from\s+["\']express["\']',
+        "pattern": r'app\.listen\s*\(|createServer\s*\(',
         "controls": ["CC6.6", "CC6.8"],
         "frameworks": ["soc2", "iso27001"],
         "severity": "MEDIUM",
-        "message": "Express app detected — verify helmet.js is configured to set security headers (CSP, HSTS, X-Frame-Options).",
+        "message": "HTTP server started — verify security headers (helmet.js) are configured for CSP, HSTS, X-Frame-Options.",
         "fix": "Add helmet() middleware: app.use(require('helmet')()). Prevents clickjacking, MIME sniffing, and XSS via headers.",
     },
     {
@@ -373,31 +373,125 @@ def fetch_file_content(owner: str, repo: str, path: str, token: Optional[str] = 
 
 # ── Scanners ──────────────────────────────────────────────────────────────────
 
+# Directories/files that indicate test code — lower severity, higher FP rate
+_TEST_INDICATORS = {"test", "tests", "spec", "specs", "__tests__", "__mocks__", "fixtures", "mock", "stub", "fake", "sample", "example", "demo"}
+
+# Files that commonly contain env examples — not real credentials
+_ENV_EXAMPLE_FILES = {".env.example", ".env.sample", ".env.template", "env.example", "config.example.js", "config.sample.js"}
+
+
+def _is_test_file(path: str) -> bool:
+    """Check if a file is in a test directory or is a test file."""
+    parts = path.lower().split("/")
+    filename = parts[-1]
+    if any(t in p for p in parts[:-1] for t in _TEST_INDICATORS):
+        return True
+    if filename.endswith((".test.js", ".test.ts", ".spec.js", ".spec.ts", "_test.py", "_test.go")):
+        return True
+    return False
+
+
+def _is_false_positive(pattern_id: str, line: str, content: str, path: str) -> bool:
+    """Context-aware false positive detection — reduces noise significantly."""
+    lower_line = line.lower().strip()
+    lower_content = content.lower()
+    filename = path.split("/")[-1].lower()
+
+    # Skip env example files for credential patterns
+    if pattern_id in ("CRED-001", "CRED-002") and filename in _ENV_EXAMPLE_FILES:
+        return True
+
+    # CRED-002: Skip if the "password" is clearly a variable/config key name, not a value
+    if pattern_id == "CRED-002":
+        # Skip: password = os.environ.get(...) or process.env.PASSWORD
+        if "environ" in lower_line or "process.env" in lower_line or "getenv" in lower_line:
+            return True
+        # Skip: password = config.get(...) or settings.PASSWORD
+        if "config." in lower_line or "settings." in lower_line:
+            return True
+        # Skip placeholder values like "your_password_here", "changeme", "xxx"
+        placeholders = ["your_", "changeme", "xxx", "todo", "fixme", "placeholder", "replace_me", "insert_"]
+        if any(p in lower_line for p in placeholders):
+            return True
+
+    # HEADER-001: Only flag if helmet/security headers are NOT found anywhere in the file
+    if pattern_id == "HEADER-001":
+        if "helmet" in lower_content or "x-frame-options" in lower_content or "content-security-policy" in lower_content:
+            return True  # Already has security headers
+
+    # CSRF-001: Only flag if no CSRF middleware is found in the file
+    if pattern_id == "CSRF-001":
+        if "csurf" in lower_content or "csrf" in lower_content or "csrftoken" in lower_content:
+            return True  # Already has CSRF protection
+        # Skip API-only routes (they use token auth, not cookies)
+        if "/api/" in lower_line:
+            return True
+
+    # COOKIE-001: Skip if secure flags are already present in the file
+    if pattern_id == "COOKIE-001":
+        if "secure: true" in lower_content or "httponly: true" in lower_content or "samesite" in lower_content:
+            return True  # Already configured securely
+
+    # RATELIMIT-001: Skip if rate limiting middleware exists in the file
+    if pattern_id == "RATELIMIT-001":
+        if "rate-limit" in lower_content or "ratelimit" in lower_content or "express-rate-limit" in lower_content or "throttle" in lower_content:
+            return True
+
+    # CORS-001: Skip if specific origins are also defined (not just wildcard)
+    if pattern_id == "CORS-001":
+        if "allowedorigins" in lower_content or "whitelist" in lower_content:
+            return True
+
+    # DEBUG-001: Skip if it's in a config file that checks NODE_ENV
+    if pattern_id == "DEBUG-001":
+        if "node_env" in lower_content or "production" in lower_content:
+            return True
+
+    # RAND-001: Skip if secrets module is also imported (they're using both)
+    if pattern_id == "RAND-001":
+        if "import secrets" in lower_content or "from secrets" in lower_content or "crypto.random" in lower_content:
+            return True
+
+    return False
+
+
 def scan_file(path: str, content: str) -> list:
-    """Run all 15 compliance patterns against a file. Returns list of findings."""
+    """Run all compliance patterns against a file with context-aware false positive reduction."""
     findings = []
     lines = content.splitlines()
+    is_test = _is_test_file(path)
 
     for pattern_def in COMPLIANCE_PATTERNS:
         try:
             regex = re.compile(pattern_def["pattern"], re.MULTILINE)
             for i, line in enumerate(lines, 1):
                 if regex.search(line):
-                    # Skip obvious false positives (comments)
+                    # Skip comments
                     stripped = line.strip()
                     if stripped.startswith("#") or stripped.startswith("//") or stripped.startswith("*"):
                         continue
+
+                    # Skip context-aware false positives
+                    if _is_false_positive(pattern_def["id"], line, content, path):
+                        continue
+
+                    # Downgrade test file findings to LOW
+                    severity = pattern_def["severity"]
+                    if is_test and severity in ("CRITICAL", "HIGH"):
+                        severity = "LOW"
+
                     findings.append({
                         "pattern_id": pattern_def["id"],
                         "name": pattern_def["name"],
                         "file": path,
                         "line": i,
-                        "line_content": line.strip()[:120],
+                        "line_content": stripped[:120],
                         "controls": pattern_def["controls"],
                         "frameworks": pattern_def["frameworks"],
-                        "severity": pattern_def["severity"],
+                        "severity": severity,
                         "message": pattern_def["message"],
                         "fix": pattern_def["fix"],
+                        "in_test_file": is_test,
                     })
                     break  # One finding per pattern per file
         except re.error:
