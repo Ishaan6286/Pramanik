@@ -670,18 +670,6 @@ async def github_webhook(request: Request):
         ref = body.get("ref", "")
         commit_sha = body.get("after", body.get("head_commit", {}).get("id", ""))
 
-        # Get installation token — works on ANY repo where app is installed
-        installation = body.get("installation", {})
-        installation_id = installation.get("id")
-        if installation_id:
-            try:
-                import github_app_auth
-                token = github_app_auth.get_token_for_installation(installation_id)
-                print(f"[Webhook] Got installation token for installation {installation_id}")
-            except Exception as e:
-                print(f"[Webhook] Installation token failed ({e}), falling back to default token")
-                token = os.getenv("GITHUB_DEFAULT_TOKEN", "")
-
         # For pull_request events
         if event_type == "pull_request":
             pr = body.get("pull_request", {})
