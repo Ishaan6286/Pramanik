@@ -126,7 +126,7 @@ export default function ComplianceChatBot() {
       const errorMessage = {
         id: messages.length + 2,
         type: "bot",
-        text: `Error: ${error.message}. Make sure the backend is running on port 3001.`,
+        text: `Error: ${error.message}. Make sure the backend is running on port 8000.`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);

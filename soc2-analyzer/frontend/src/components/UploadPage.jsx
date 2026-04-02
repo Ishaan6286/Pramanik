@@ -1,293 +1,460 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { API_URL } from "../config";
-import { Upload, FileCheck, LogOut, Check, Cloud, Key, Github, Zap } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  UploadCloud, FileJson, ArrowRight, Shield, X, RefreshCw, Lock,
+  Cloud, Key, Github, Check, Zap, FileCheck
+} from "lucide-react";
+import ThemeToggle from "./ThemeToggle";
 import GitHubAgent from "./GitHubAgent";
 
-const FRAMEWORKS = [
-  { key: "soc2",     label: "SOC 2",        sub: "AICPA · 33 controls",  color: "#4F46E5" },
-  { key: "iso27001", label: "ISO 27001",     sub: "ISMS · 31 controls",   color: "#059669" },
-  { key: "hipaa",    label: "HIPAA",         sub: "Health · 28 controls", color: "#D97706" },
-  { key: "dpdp",     label: "DPDP 2023",    sub: "India · 15 controls",  color: "#DB2777" },
+const AVAILABLE_FRAMEWORKS = [
+  {
+    key: "soc2",
+    label: "SOC 2",
+    subtitle: "AICPA Trust Services Criteria",
+    color: "hsl(168, 46%, 35%)",
+    controls: 33,
+    popular: true,
+  },
+  {
+    key: "iso27001",
+    label: "ISO 27001",
+    subtitle: "Information Security Management",
+    color: "hsl(152, 36%, 40%)",
+    controls: 31,
+    popular: true,
+  },
+  {
+    key: "hipaa",
+    label: "HIPAA",
+    subtitle: "Health Information Protection",
+    color: "hsl(28, 45%, 52%)",
+    controls: 28,
+    popular: false,
+  },
+  {
+    key: "dpdp",
+    label: "DPDP Act 2023",
+    subtitle: "India Data Protection",
+    color: "hsl(330, 28%, 56%)",
+    controls: 15,
+    popular: true,
+  },
 ];
 
-const AWS_REGIONS = [
-  { value: "ap-south-1",  label: "Mumbai" },
-  { value: "ap-south-2",  label: "Hyderabad" },
-  { value: "us-east-1",   label: "N. Virginia" },
-  { value: "us-west-2",   label: "Oregon" },
-  { value: "eu-west-1",   label: "Ireland" },
-  { value: "eu-north-1",  label: "Stockholm" },
-];
-
-const s = {
-  page:    { minHeight: "100vh", background: "#F8F7F4", display: "flex", flexDirection: "column", fontFamily: "'Inter', system-ui, sans-serif" },
-  nav:     { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 32px", background: "#FFFFFF", borderBottom: "1px solid #EFEFED" },
-  logo:    { display: "flex", alignItems: "center" },
-  navR:    { display: "flex", alignItems: "center", gap: 12 },
-  userTxt: { fontSize: 13, color: "#6B7280" },
-  logoutBtn: { padding: "6px 12px", borderRadius: 8, border: "1px solid #E5E7EB", background: "#FFF", cursor: "pointer", fontSize: 12, color: "#6B7280", display: "flex", alignItems: "center", gap: 4 },
-  main:    { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 16px 80px" },
-  heading: { fontSize: 28, fontWeight: 700, color: "#111827", marginBottom: 6, textAlign: "center" },
-  sub:     { fontSize: 15, color: "#6B7280", textAlign: "center", marginBottom: 36 },
-  // Framework chips
-  fwRow:   { display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", marginBottom: 32 },
-  // Tabs
-  tabs:    { display: "flex", gap: 4, background: "#EFEFED", padding: 4, borderRadius: 12, marginBottom: 28 },
-  // Card
-  card:    { width: "100%", maxWidth: 520, background: "#FFFFFF", borderRadius: 20, padding: 28, boxShadow: "0 1px 3px rgba(0,0,0,0.07), 0 8px 24px rgba(0,0,0,0.05)" },
-  label:   { fontSize: 12, fontWeight: 600, color: "#6B7280", marginBottom: 6, display: "block", letterSpacing: "0.04em", textTransform: "uppercase" },
-  input:   { width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid #E5E7EB", fontSize: 14, color: "#111827", background: "#FAFAF8", outline: "none", boxSizing: "border-box" },
-  select:  { width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid #E5E7EB", fontSize: 14, color: "#111827", background: "#FAFAF8", outline: "none", boxSizing: "border-box", cursor: "pointer" },
-  hint:    { fontSize: 12, color: "#9CA3AF", marginTop: 6 },
-  err:     { marginTop: 16, padding: "12px 16px", borderRadius: 10, background: "#FEF2F2", border: "1px solid #FECACA", color: "#DC2626", fontSize: 13 },
+const fadeUp = {
+  hidden:  { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.2, 0, 0, 1] } }
 };
 
-function FrameworkChip({ fw, selected, onToggle }) {
-  return (
-    <button
-      onClick={() => onToggle(fw.key)}
-      style={{
-        display: "flex", alignItems: "center", gap: 8,
-        padding: "8px 16px", borderRadius: 100,
-        border: `1.5px solid ${selected ? fw.color : "#E5E7EB"}`,
-        background: selected ? fw.color + "12" : "#FFFFFF",
-        cursor: "pointer", transition: "all 0.15s",
-      }}
-    >
-      {selected && (
-        <span style={{ width: 14, height: 14, borderRadius: "50%", background: fw.color, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Check size={9} color="#fff" strokeWidth={3} />
-        </span>
-      )}
-      <span style={{ fontSize: 13, fontWeight: 600, color: selected ? fw.color : "#374151" }}>{fw.label}</span>
-      <span style={{ fontSize: 11, color: "#9CA3AF" }}>{fw.sub}</span>
-    </button>
-  );
-}
+export default function UploadPage({ onAnalysis, onBack, loading, setLoading, user, onLogout }) {
+  const [file, setFile] = useState(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanStep, setScanStep] = useState(0);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const [mode, setMode] = useState("upload"); // "upload", "aws", or "github"
+  const [selectedFrameworks, setSelectedFrameworks] = useState(["soc2", "iso27001", "dpdp"]);
+  const [error, setError] = useState(null);
+  const [awsCreds, setAwsCreds] = useState({ access_key: "", secret_key: "", region: "ap-south-1", company_name: "" });
+  
+  const fileRef = useRef(null);
 
-function Tab({ label, icon: Icon, active, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        display: "flex", alignItems: "center", gap: 6,
-        padding: "8px 18px", borderRadius: 9,
-        background: active ? "#FFFFFF" : "transparent",
-        border: "none", cursor: "pointer",
-        fontSize: 13, fontWeight: 600,
-        color: active ? "#111827" : "#6B7280",
-        boxShadow: active ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
-        transition: "all 0.15s",
-      }}
-    >
-      <Icon size={14} />
-      {label}
-    </button>
-  );
-}
+  const steps = [
+    "Initializing Inference Core",
+    "Mapping Resource Topology",
+    "Surface Contact Analysis",
+    "Policy Deep-Link Verification",
+    "Generating Manifest Signal"
+  ];
 
-function PrimaryBtn({ onClick, disabled, loading, children, color = "#4F46E5" }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        width: "100%", padding: "13px 20px", borderRadius: 12,
-        background: disabled ? "#E5E7EB" : color,
-        color: disabled ? "#9CA3AF" : "#FFFFFF",
-        fontSize: 14, fontWeight: 600, border: "none",
-        cursor: disabled ? "not-allowed" : "pointer",
-        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-        marginTop: 24, transition: "opacity 0.15s",
-      }}
-    >
-      {loading
-        ? <><span style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite" }} />Analyzing…</>
-        : children
-      }
-    </button>
-  );
-}
+  const toggleFramework = (key) => {
+    setSelectedFrameworks((prev) =>
+      prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]
+    );
+  };
 
-export default function UploadPage({ onAnalysis, loading, setLoading, user, onLogout }) {
-  const [dragOver, setDragOver]         = useState(false);
-  const [file, setFile]                 = useState(null);
-  const [error, setError]               = useState(null);
-  const [selectedFrameworks, setSelFw]  = useState(["soc2", "iso27001", "dpdp"]);
-  const [mode, setMode]                 = useState("upload");
-  const [awsCreds, setAwsCreds]         = useState({ access_key: "", secret_key: "", region: "ap-south-1", company_name: "" });
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setIsDragActive(true);
+    } else if (e.type === "dragleave") {
+      setIsDragActive(false);
+    }
+  };
 
-  const toggleFw = (key) => setSelFw(prev => prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]);
-
-  const handleFile = (f) => {
-    if (f?.name.endsWith(".json")) { setFile(f); setError(null); }
-    else setError("Please upload a .json file");
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+    const f = e.dataTransfer.files[0];
+    if (f && (f.type === "application/json" || f.name.endsWith(".json"))) setFile(f);
   };
 
   const filterFrameworks = (data) => {
     if (data.framework_scores) {
       const filtered = {};
-      selectedFrameworks.forEach(k => { if (data.framework_scores[k]) filtered[k] = data.framework_scores[k]; });
+      selectedFrameworks.forEach((key) => {
+        if (data.framework_scores[key]) filtered[key] = data.framework_scores[key];
+      });
       data.framework_scores = filtered;
       data.selected_frameworks = selectedFrameworks;
     }
     return data;
   };
 
-  const handleAnalyze = async () => {
+  const handleStartAnalysis = async () => {
     if (!file || selectedFrameworks.length === 0) return;
-    setLoading(true); setError(null);
+    setScanning(true);
+    setScanStep(0);
+    setError(null);
+
+    let progressTimer = setInterval(() => {
+       setScanStep(prev => (prev < steps.length - 1 ? prev + 1 : prev));
+    }, 1500);
+
     try {
       const configText = await file.text();
       const configJson = JSON.parse(configText);
+
       const formData = new FormData();
       formData.append("config", file);
-      const resp = await fetch(`${API_URL}/api/analyze`, { method: "POST", body: formData });
-      if (!resp.ok) throw new Error("Analysis failed");
-      onAnalysis(filterFrameworks(await resp.json()), configJson);
-    } catch (e) { setError("Failed: " + e.message); }
-    finally { setLoading(false); }
+
+      const response = await fetch(`${API_URL}/api/analyze`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Analysis failed");
+      const data = await response.json();
+
+      clearInterval(progressTimer);
+      setScanStep(steps.length);
+
+      setTimeout(() => {
+        onAnalysis(filterFrameworks(data), configJson);
+        setScanning(false);
+        setLoading(false);
+      }, 800);
+    } catch (err) {
+      setError("Failed to analyze: " + err.message);
+      setScanning(false);
+      clearInterval(progressTimer);
+      setLoading(false);
+    }
   };
 
   const handleAWSScan = async () => {
-    if (!awsCreds.access_key || !awsCreds.secret_key) { setError("Enter both Access Key and Secret Key"); return; }
-    setLoading(true); setError(null);
+    if (!awsCreds.access_key || !awsCreds.secret_key) {
+      setError("Please enter both Access Key and Secret Key");
+      return;
+    }
+    setScanning(true);
+    setScanStep(0);
+    setError(null);
+
+    let progressTimer = setInterval(() => {
+       setScanStep(prev => (prev < steps.length - 1 ? prev + 1 : prev));
+    }, 2000);
+
     try {
-      const resp = await fetch(`${API_URL}/api/scan-aws`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+      const response = await fetch(`${API_URL}/api/scan-aws`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...awsCreds, industry: "saas_startup" }),
       });
-      if (!resp.ok) { const e = await resp.json(); throw new Error(e.detail || "Scan failed"); }
-      onAnalysis(filterFrameworks(await resp.json()), {});
-    } catch (e) { setError("AWS scan failed: " + e.message); }
-    finally { setLoading(false); }
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.detail || "AWS scan failed");
+      }
+
+      const data = await response.json();
+      clearInterval(progressTimer);
+      setScanStep(steps.length);
+
+      setTimeout(() => {
+        onAnalysis(filterFrameworks(data), {});
+        setScanning(false);
+        setLoading(false);
+      }, 800);
+    } catch (err) {
+      setError("AWS scan failed: " + err.message);
+      setScanning(false);
+      clearInterval(progressTimer);
+      setLoading(false);
+    }
   };
 
   return (
-    <div style={s.page}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } } * { box-sizing: border-box; }`}</style>
+    <div className="min-h-screen relative bg-[hsl(var(--col-bg))] text-[hsl(var(--col-text))] overflow-hidden font-display">
+      
+      {/* ── Ambient Pattern — lighter ── */}
+      <div className="absolute inset-0 z-0 bg-pattern-dots opacity-[0.10] pointer-events-none" />
 
-      {/* Nav */}
-      <nav style={s.nav}>
-        <div style={s.logo}>
-          <img src="/logo.png" alt="ComplianceAI" style={{ height: 64, width: "auto", objectFit: "contain" }} />
-        </div>
-        <div style={s.navR}>
-          <span style={s.userTxt}>{user}</span>
-          <button style={s.logoutBtn} onClick={onLogout}>
-            <LogOut size={13} />
-            Sign out
-          </button>
-        </div>
-      </nav>
-
-      {/* Main */}
-      <main style={s.main}>
-        <h1 style={s.heading}>Compliance Analysis</h1>
-        <p style={s.sub}>Select frameworks, then scan your code, AWS account, or GitHub repo</p>
-
-        {/* Framework chips */}
-        <div style={s.fwRow}>
-          {FRAMEWORKS.map(fw => (
-            <FrameworkChip key={fw.key} fw={fw} selected={selectedFrameworks.includes(fw.key)} onToggle={toggleFw} />
-          ))}
-        </div>
-
-        {/* Mode tabs */}
-        <div style={s.tabs}>
-          <Tab label="Upload JSON" icon={Upload}  active={mode === "upload"} onClick={() => setMode("upload")} />
-          <Tab label="Connect AWS" icon={Cloud}   active={mode === "aws"}    onClick={() => setMode("aws")} />
-          <Tab label="Scan GitHub" icon={Github}  active={mode === "github"} onClick={() => setMode("github")} />
-        </div>
-
-        {/* GitHub mode — full width handled by GitHubAgent */}
-        {mode === "github" && (
-          <div style={{ width: "100%", maxWidth: 600 }}>
-            <GitHubAgent onResults={onAnalysis} selectedFrameworks={selectedFrameworks} loading={loading} setLoading={setLoading} />
+      {/* ── TOP NAV ── */}
+      <header className="relative z-50 border-b border-[hsl(var(--col-border))] bg-[hsl(var(--col-bg)/0.85)] backdrop-blur-md">
+        <div className="max-w-[1400px] mx-auto px-8 h-14 flex items-center justify-between">
+          <div className="flex items-center">
+            <span className="font-extrabold text-[22px] tracking-tight text-[hsl(var(--col-primary))]">Pramanik</span>
           </div>
-        )}
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[hsl(var(--col-primary)/0.06)] text-[hsl(var(--col-muted))] hover:text-[hsl(var(--col-primary))] transition-all">
+               <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </header>
 
-        {/* Upload mode */}
-        {mode === "upload" && (
-          <div style={s.card}>
-            <div
-              style={{
-                borderRadius: 14, border: `2px dashed ${dragOver ? "#4F46E5" : file ? "#059669" : "#E5E7EB"}`,
-                background: file ? "#F0FDF4" : dragOver ? "#EEF2FF" : "#FAFAF8",
-                padding: "36px 24px", textAlign: "center", cursor: "pointer", transition: "all 0.2s",
-              }}
-              onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }}
-              onClick={() => document.getElementById("fi").click()}
-            >
-              <input id="fi" type="file" accept=".json" style={{ display: "none" }} onChange={e => handleFile(e.target.files[0])} />
-              {file ? (
-                <>
-                  <FileCheck size={32} color="#059669" style={{ margin: "0 auto 10px" }} />
-                  <p style={{ fontWeight: 600, color: "#111827", fontSize: 14 }}>{file.name}</p>
-                  <p style={{ fontSize: 12, color: "#6B7280", marginTop: 4 }}>Ready to analyze</p>
-                </>
-              ) : (
-                <>
-                  <Upload size={32} color="#9CA3AF" style={{ margin: "0 auto 10px" }} />
-                  <p style={{ fontWeight: 600, color: "#374151", fontSize: 14 }}>Drop your AWS config JSON here</p>
-                  <p style={{ fontSize: 12, color: "#9CA3AF", marginTop: 4 }}>or click to browse</p>
-                </>
+      {/* ── MAIN WORKSPACE ── */}
+      <main className="relative z-10 max-w-5xl mx-auto min-h-[calc(100vh-56px)] flex flex-col items-center py-14 px-6">
+        
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} className="text-center mb-10">
+          <span className="badge mb-4">
+            Compliance Scanner
+          </span>
+          <h1 className="text-[30px] font-bold tracking-tight mt-3 mb-2">
+             Scan Your Code
+          </h1>
+          <p className="text-[15px] text-[hsl(var(--col-muted))] font-normal">
+             Select compliance frameworks, connect your codebase, and get instant results.
+          </p>
+        </motion.div>
+
+        <div className="w-full max-w-2xl mx-auto">
+
+           {/* MAIN CONTENT */}
+           <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex flex-col items-center">
+             
+              {/* Ingestion Method (horizontal) */}
+              <div className="w-full mb-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-[12px] font-bold uppercase tracking-widest text-[hsl(var(--col-muted))] px-1">
+                    Scan Method
+                  </h3>
+                </div>
+
+                <div className="w-full flex items-center gap-2">
+                  {[
+                    { id: "upload", label: "Local Config", icon: UploadCloud },
+                    { id: "aws",    label: "Connect AWS",  icon: Cloud },
+                    { id: "github", label: "Scan GitHub",  icon: Github },
+                  ].map(({ id, label, icon: Icon }) => (
+                    <button
+                      key={id}
+                      onClick={() => setMode(id)}
+                      className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-[10px] text-[13px] font-semibold border transition-all focus:outline-none
+                        ${mode === id
+                          ? 'bg-[hsl(var(--col-primary)/0.08)] border-[hsl(var(--col-primary)/0.28)] text-[hsl(var(--col-primary))]'
+                          : 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-border))] text-[hsl(var(--col-muted))] hover:bg-[hsl(var(--col-raise))] hover:border-[hsl(var(--col-primary)/0.18)] hover:text-[hsl(var(--col-text))]'}`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* GitHub Agent View */}
+              {mode === "github" && (
+                <div className="w-full">
+                  <GitHubAgent onResults={(data) => onAnalysis(filterFrameworks(data), {})} selectedFrameworks={selectedFrameworks} loading={loading} setLoading={setLoading} />
+                </div>
               )}
-            </div>
-            {error && <div style={s.err}>{error}</div>}
-            <PrimaryBtn onClick={handleAnalyze} disabled={!file || loading || selectedFrameworks.length === 0} loading={loading}>
-              <Zap size={16} />
-              Analyze {selectedFrameworks.length} Framework{selectedFrameworks.length !== 1 ? "s" : ""}
-            </PrimaryBtn>
-            <p style={{ ...s.hint, textAlign: "center", marginTop: 12 }}>
-              Test with <code style={{ background: "#F3F4F6", padding: "2px 6px", borderRadius: 5, fontSize: 11 }}>sample-data/sample-aws-config.json</code>
-            </p>
-          </div>
-        )}
 
-        {/* AWS mode */}
-        {mode === "aws" && (
-          <div style={s.card}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-              <Key size={16} color="#4F46E5" />
-              <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>AWS Credentials</span>
-            </div>
+              {/* AWS Connect View */}
+              {mode === "aws" && (
+                <div className="w-full space-y-5">
+                  <div className="surface-raise p-8 rounded-2xl bg-[hsl(var(--col-surface))] border border-[hsl(var(--col-border))] space-y-5">
+                    <div className="flex items-center gap-4 mb-2">
+                       <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center shrink-0">
+                          <Cloud className="w-5 h-5 text-amber-500" />
+                       </div>
+                       <div>
+                          <h3 className="text-[17px] font-bold tracking-tight">AWS Account Bridge</h3>
+                          <p className="text-[12px] text-[hsl(var(--col-muted))] font-medium">Read-only scanner for IAM, Networking, and S3 posture</p>
+                       </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold uppercase tracking-widest text-[hsl(var(--col-muted))]">Access Key ID</label>
+                        <div className="relative">
+                          <Key className="absolute left-3.5 top-3 w-4 h-4 text-[hsl(var(--col-muted))]" />
+                          <input type="text" placeholder="AKIA..." value={awsCreds.access_key} onChange={(e) => setAwsCreds({ ...awsCreds, access_key: e.target.value })} className="w-full pl-10 pr-4 py-2.5 rounded-[10px] bg-[hsl(var(--col-bg))] border border-[hsl(var(--col-border))] text-[13px] font-mono focus:ring-2 focus:ring-[hsl(var(--col-primary)/0.18)] focus:outline-none transition-all" />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold uppercase tracking-widest text-[hsl(var(--col-muted))]">Secret Access Key</label>
+                        <div className="relative">
+                          <Lock className="absolute left-3.5 top-3 w-4 h-4 text-[hsl(var(--col-muted))]" />
+                          <input type="password" placeholder="••••••••••••" value={awsCreds.secret_key} onChange={(e) => setAwsCreds({ ...awsCreds, secret_key: e.target.value })} className="w-full pl-10 pr-4 py-2.5 rounded-[10px] bg-[hsl(var(--col-bg))] border border-[hsl(var(--col-border))] text-[13px] font-mono focus:ring-2 focus:ring-[hsl(var(--col-primary)/0.18)] focus:outline-none transition-all" />
+                        </div>
+                      </div>
+                    </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div>
-                <label style={s.label}>Company Name (optional)</label>
-                <input style={s.input} placeholder="Acme Corp" value={awsCreds.company_name}
-                  onChange={e => setAwsCreds({ ...awsCreds, company_name: e.target.value })} />
-              </div>
-              <div>
-                <label style={s.label}>Access Key ID</label>
-                <input style={{ ...s.input, fontFamily: "monospace" }} placeholder="AKIA…" value={awsCreds.access_key}
-                  onChange={e => setAwsCreds({ ...awsCreds, access_key: e.target.value })} />
-              </div>
-              <div>
-                <label style={s.label}>Secret Access Key</label>
-                <input style={{ ...s.input, fontFamily: "monospace" }} type="password" placeholder="••••••••" value={awsCreds.secret_key}
-                  onChange={e => setAwsCreds({ ...awsCreds, secret_key: e.target.value })} />
-              </div>
-              <div>
-                <label style={s.label}>Region</label>
-                <select style={s.select} value={awsCreds.region} onChange={e => setAwsCreds({ ...awsCreds, region: e.target.value })}>
-                  {AWS_REGIONS.map(r => <option key={r.value} value={r.value}>{r.label} ({r.value})</option>)}
-                </select>
-              </div>
-            </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold uppercase tracking-widest text-[hsl(var(--col-muted))]">Account Label</label>
+                        <input type="text" placeholder="Production / Staging" value={awsCreds.company_name} onChange={(e) => setAwsCreds({ ...awsCreds, company_name: e.target.value })} className="w-full px-3.5 py-2.5 rounded-[10px] bg-[hsl(var(--col-bg))] border border-[hsl(var(--col-border))] text-[13px] focus:ring-2 focus:ring-[hsl(var(--col-primary)/0.18)] focus:outline-none transition-all" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold uppercase tracking-widest text-[hsl(var(--col-muted))]">Primary Region</label>
+                        <select value={awsCreds.region} onChange={(e) => setAwsCreds({ ...awsCreds, region: e.target.value })} className="w-full px-3.5 py-2.5 rounded-[10px] bg-[hsl(var(--col-bg))] border border-[hsl(var(--col-border))] text-[13px] focus:ring-2 focus:ring-[hsl(var(--col-primary)/0.18)] focus:outline-none transition-all">
+                          <option value="ap-south-1">Mumbai (ap-south-1)</option>
+                          <option value="us-east-1">N. Virginia (us-east-1)</option>
+                          <option value="eu-west-1">Ireland (eu-west-1)</option>
+                        </select>
+                      </div>
+                    </div>
 
-            <p style={s.hint}>Credentials are used only for scanning and are never stored.</p>
-            {error && <div style={s.err}>{error}</div>}
-            <PrimaryBtn onClick={handleAWSScan} disabled={!awsCreds.access_key || !awsCreds.secret_key || loading || selectedFrameworks.length === 0} loading={loading} color="#059669">
-              <Cloud size={16} />
-              Scan AWS Account
-            </PrimaryBtn>
-          </div>
-        )}
+                    <div className="pt-2 flex flex-col items-center">
+                       <button onClick={handleAWSScan} disabled={scanning} className="btn-solid w-full max-w-[280px] py-3 text-[14px] flex justify-center">
+                          {scanning ? 'Connecting Account...' : 'Initiate AWS Audit'}
+                       </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Upload View */}
+              {mode === "upload" && (
+                <div className="w-full space-y-6">
+                  <motion.div
+                    onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
+                    className={`relative w-full rounded-2xl transition-all duration-300 overflow-hidden cursor-pointer flex flex-col items-center justify-center p-14 border-2 border-dashed
+                      ${file 
+                        ? 'bg-[hsl(var(--col-raise))] border-[hsl(var(--col-primary)/0.45)]' 
+                        : isDragActive 
+                          ? 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-primary)/0.5)] ring-4 ring-[hsl(var(--col-primary)/0.06)]' 
+                          : 'bg-[hsl(var(--col-surface))] border-[hsl(var(--col-border))] hover:border-[hsl(var(--col-primary)/0.28)] hover:bg-[hsl(var(--col-raise))]'}`}
+                    onClick={() => !file && fileRef.current.click()}
+                  >
+                    <input type="file" ref={fileRef} hidden accept=".json" onChange={e => handleDrop({ preventDefault:()=>{}, stopPropagation:()=>{}, dataTransfer:{files:e.target.files} })} />
+
+                    <AnimatePresence mode="wait">
+                      {!file ? (
+                        <motion.div key="empty" initial={{ opacity:0, scale:0.97 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0 }} className="flex flex-col items-center text-center">
+                          <div className="w-14 h-14 rounded-xl bg-[hsl(var(--col-primary)/0.06)] border border-[hsl(var(--col-primary)/0.12)] flex items-center justify-center mb-5">
+                             <UploadCloud className="w-6 h-6 text-[hsl(var(--col-primary))]" />
+                          </div>
+                          <p className="font-semibold text-[17px] mb-1 tracking-tight">Click to upload manifest</p>
+                          <p className="text-[13px] text-[hsl(var(--col-muted))] font-normal">Supports AWS, GCP, and Azure JSON exports</p>
+                        </motion.div>
+                      ) : (
+                        <motion.div key="file" initial={{ opacity:0, scale:0.97 }} animate={{ opacity:1, scale:1 }} className="flex flex-col items-center text-center w-full z-10">
+                          <div className="w-16 h-16 rounded-2xl bg-[hsl(var(--col-primary)/0.08)] flex items-center justify-center mb-5 border border-[hsl(var(--col-primary)/0.18)]">
+                            <FileJson className="w-7 h-7 text-[hsl(var(--col-primary))]" />
+                          </div>
+                          <h3 className="font-bold text-[18px] truncate max-w-[380px] text-[hsl(var(--col-text))] tracking-tight">{file.name}</h3>
+                          <p className="text-[12px] font-medium text-[hsl(var(--col-muted))] mt-2 uppercase tracking-widest opacity-60">Ready for autonomous audit</p>
+                          
+                          <button onClick={(e) => { e.stopPropagation(); setFile(null); }} className="mt-8 text-[12px] font-medium text-[hsl(var(--col-muted))] hover:text-red-500 transition-all underline underline-offset-4">
+                            Discard file
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+
+                  <div className="w-full flex flex-col items-center">
+                    <AnimatePresence>
+                      {file && (
+                        <motion.button 
+                          initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-8 }}
+                          onClick={handleStartAnalysis}
+                          disabled={scanning}
+                          className="btn-solid w-full max-w-[280px] group flex justify-center py-3 text-[14px]"
+                        >
+                          {scanning ? 'Initializing Analysis...' : 'Run Autonomous Audit'}
+                          {!scanning && <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-0.5" />}
+                        </motion.button>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              )}
+
+              {error && mode !== "github" && (
+                 <div className="mt-6 flex items-center gap-3 text-red-500 bg-red-50/60 border border-red-100 px-5 py-3.5 rounded-xl w-full">
+                    <X className="w-4 h-4 flex-shrink-0" />
+                    <p className="text-[13px] font-medium">{error}</p>
+                 </div>
+              )}
+
+              {mode !== "github" && (
+                 <div className="flex items-center justify-center gap-6 mt-10 bg-[hsl(var(--col-surface))] border border-[hsl(var(--col-border))] px-6 py-2.5 rounded-full">
+                   <div className="flex items-center gap-2 text-[11px] text-[hsl(var(--col-muted))] font-medium uppercase tracking-widest">
+                     <Shield className="w-3.5 h-3.5 text-[hsl(var(--col-primary))]" />
+                     Secure
+                   </div>
+                   <div className="w-px h-3.5 bg-[hsl(var(--col-border))]" />
+                   <div className="flex items-center gap-2 text-[11px] text-[hsl(var(--col-muted))] font-medium uppercase tracking-widest">
+                     <Lock className="w-3.5 h-3.5 text-[hsl(var(--col-primary))]" />
+                     Private
+                   </div>
+                 </div>
+              )}
+           </motion.div>
+        </div>
+
+        {/* GitHub Results Bottom Row Portals */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 w-full mt-6 empty:hidden">
+           <div className="lg:col-span-4" id="github-bottom-left"></div>
+           <div className="lg:col-span-8" id="github-bottom-right"></div>
+        </div>
       </main>
+
+      {/* ── SCANNING OVERLAY ── */}
+      <AnimatePresence>
+        {scanning && (
+          <motion.div 
+            initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+            className="fixed inset-0 z-[100] bg-[hsl(var(--col-bg)/0.94)] backdrop-blur-xl flex flex-col items-center justify-center p-6"
+          >
+            <div className="max-w-[440px] w-full flex flex-col items-center text-center">
+               <div className="w-16 h-16 bg-gradient-to-br from-[hsl(var(--col-primary))] to-[hsl(var(--col-accent))] rounded-2xl flex items-center justify-center mb-8 shadow-[0_8px_32px_hsl(var(--col-primary)/0.25)]">
+                  <RefreshCw className="w-7 h-7 text-white animate-spin-slow" />
+               </div>
+
+               <div className="w-full space-y-4 mb-8">
+                  <div className="flex justify-between items-end mb-2">
+                     <p className="text-[12px] font-semibold text-[hsl(var(--col-muted))] uppercase tracking-widest">Processing</p>
+                     <p className="text-[18px] font-bold text-[hsl(var(--col-primary))]">
+                        {Math.round(((scanStep + 1) / (steps.length + 1)) * 100)}%
+                     </p>
+                  </div>
+                  <div className="h-1.5 w-full bg-[hsl(var(--col-border))] rounded-full overflow-hidden">
+                    <motion.div 
+                      className="h-full bg-gradient-to-r from-[hsl(var(--col-primary))] to-[hsl(var(--col-accent))] rounded-full" 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${((scanStep + 1) / (steps.length + 1)) * 100}%` }}
+                      transition={{ duration: 1.0, ease: "easeInOut" }}
+                    />
+                  </div>
+               </div>
+
+               <div className="h-14 w-full flex flex-col justify-center items-center">
+                  <AnimatePresence mode="wait">
+                    <motion.div 
+                      key={scanStep}
+                      initial={{ opacity:0, y:8 }} 
+                      animate={{ opacity:1, y:0 }} 
+                      exit={{ opacity:0, y:-8 }}
+                      transition={{ duration: 0.35 }}
+                      className="text-[15px] font-semibold text-[hsl(var(--col-text))] tracking-tight"
+                    >
+                      {steps[scanStep] || "Finalizing Manifest Signal..."}
+                    </motion.div>
+                  </AnimatePresence>
+               </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }
