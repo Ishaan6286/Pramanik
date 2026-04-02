@@ -1,0 +1,16 @@
+﻿soc2-analyzer/backend/github_agent.py
+soc2-analyzer/backend/main.py
+soc2-analyzer/frontend/node_modules/.package-lock.json
+soc2-analyzer/frontend/node_modules/.vite/deps/_metadata.json
+soc2-analyzer/frontend/node_modules/.vite/deps/jspdf.js
+soc2-analyzer/frontend/node_modules/.vite/deps/lucide-react.js
+soc2-analyzer/frontend/node_modules/.vite/deps/react-dom.js
+soc2-analyzer/frontend/node_modules/.vite/deps/react-dom_client.js
+soc2-analyzer/frontend/node_modules/.vite/deps/react.js
+soc2-analyzer/frontend/node_modules/.vite/deps/react_jsx-dev-runtime.js
+soc2-analyzer/frontend/node_modules/.vite/deps/react_jsx-runtime.js
+soc2-analyzer/frontend/src/components/DriftView.jsx
+soc2-analyzer/frontend/src/components/GitHubAgent.jsx
+soc2-analyzer/frontend/src/components/LoginPage.jsx
+soc2-analyzer/frontend/src/components/UploadPage.jsx
+soc2-analyzer/frontend/src/config.js

@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from soc2_controls import run_all_checks, get_benchmark
 from framework_mappings import calculate_crvs, get_framework_summary, FRAMEWORK_MAP
+
 from security_hub import scan_aws_account
 from pramanik_ai import (
     run_gap_analysis, run_policy_generator, run_ghost_audit,
@@ -203,6 +204,7 @@ async def scan_aws(req: AWSScanRequest):
                 results=enriched, priority_fixes=priority_fixes,
                 framework_scores=framework_scores, benchmark=benchmark, config=aws_config,
             )
+
         except Exception as e:
             print(f"Supabase save failed: {e}")
 
@@ -239,6 +241,7 @@ async def audit_prep(req: AuditPrepRequest):
     except Exception as e:
         print(f"AI audit-prep failed: {e}")
         raise HTTPException(status_code=500, detail=f"Audit prep failed: {str(e)}")
+
 
 
 # ── SCAN HISTORY ───────────────────────────────────

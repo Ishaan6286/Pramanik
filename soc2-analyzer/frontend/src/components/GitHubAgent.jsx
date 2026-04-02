@@ -71,6 +71,7 @@ export default function GitHubAgent({ onResults, selectedFrameworks, loading, se
   const [expanded, setExpanded] = useState({});
   const [fixingKey, setFixingKey] = useState(null);
   const [fixResults, setFixResults] = useState({});
+
   const [agentStages, setAgentStages] = useState(AGENTS.map(a => ({ ...a, status: "pending", progress: 0 })));
   const timerRef = useRef(null);
 
@@ -211,7 +212,7 @@ export default function GitHubAgent({ onResults, selectedFrameworks, loading, se
           }}
         >
           {scanning
-            ? <><span style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> Agents runningΓÇª</>
+            ? <><span style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> Agents running...</>
             : <><Github size={16} /> Launch Agents</>
           }
         </button>
@@ -368,6 +369,7 @@ export default function GitHubAgent({ onResults, selectedFrameworks, loading, se
                     </div>
                   ))}
                 </div>
+
               </div>
             )}
           </div>
