@@ -239,6 +239,7 @@ export default function UploadPage({ onAnalysis, onBack, loading, setLoading, us
                 <div className="w-full flex items-center gap-2">
                   {[
                     { id: "upload", label: "Upload Config", icon: UploadCloud },
+                    { id: "aws",    label: "Connect AWS",  icon: Cloud },
                     { id: "github", label: "Scan GitHub",  icon: Github },
                   ].map(({ id, label, icon: Icon }) => (
                     <button
