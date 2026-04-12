@@ -639,8 +639,7 @@ async def get_audit_questions_for_control(control_id: str):
 
 
 # ══════════════════════════════════════════════════
-# GITHUB APP WEBHOOK — Auto-scans on every push/PR
-# Handles real GitHub App webhook payloads + legacy format
+# WEBHOOK — Scans repo on push events
 # ══════════════════════════════════════════════════
 
 from fastapi import Request
@@ -648,12 +647,7 @@ from fastapi import Request
 
 @app.post("/api/webhook/github")
 async def github_webhook(request: Request):
-    """
-    GitHub App webhook — triggered on push/PR events.
-    Accepts both:
-      1. Real GitHub App payloads (push event with repository object)
-      2. Legacy format (repo_url + ref from GitHub Actions)
-    """
+    """Webhook endpoint — scans repo on push events."""
     body = await request.json()
 
     # ── Parse payload (handle both formats) ──
@@ -664,7 +658,7 @@ async def github_webhook(request: Request):
     event_type = request.headers.get("X-GitHub-Event", "push")
 
     if "repository" in body:
-        # Real GitHub App webhook payload
+        # GitHub webhook payload
         repo_data = body["repository"]
         repo_url = repo_data.get("html_url") or repo_data.get("clone_url", "")
         ref = body.get("ref", "")
@@ -676,7 +670,7 @@ async def github_webhook(request: Request):
             ref = f"refs/heads/{pr.get('head', {}).get('ref', 'main')}"
             repo_url = pr.get("head", {}).get("repo", {}).get("html_url", repo_url)
 
-        print(f"[Webhook] GitHub App event: {event_type} on {repo_url} ref={ref}")
+        print(f"[Webhook] Push event: {event_type} on {repo_url} ref={ref}")
     else:
         # Legacy format (from GitHub Actions or manual calls)
         repo_url = body.get("repo_url", "")
