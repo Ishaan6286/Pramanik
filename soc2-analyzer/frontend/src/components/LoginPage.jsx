@@ -36,6 +36,11 @@ export default function LoginPage({ onLogin, onBack }) {
       setLoading(true);
       setOauthError(null);
       try {
+        // ── DIAGNOSTIC (safe — no secret logged) ──
+        const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || "").trim();
+        console.log("[OAuth:Google] client_id present:", !!googleClientId, "| trimmed length:", googleClientId.length);
+        console.log("[OAuth:Google] API_URL:", API_URL);
+
         const res = await fetch(`${API_URL}/api/auth/google`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -45,14 +50,18 @@ export default function LoginPage({ onLogin, onBack }) {
         if (!res.ok) {
           throw new Error(typeof data.detail === "string" ? data.detail : "Google sign-in failed");
         }
+        // ── Reset loading BEFORE calling onLogin so the spinner clears ──
+        setLoading(false);
         onLogin(data.email, data);
       } catch (err) {
         setOauthError(err.message || "Google sign-in failed");
         setLoading(false);
       }
     },
-    onError: () => {
+    onError: (err) => {
+      console.error("[OAuth:Google] provider error:", err);
       setOauthError("Google sign-in was cancelled or failed");
+      setLoading(false);
     },
   });
 
@@ -60,20 +69,38 @@ export default function LoginPage({ onLogin, onBack }) {
     setLoading(true);
     setOauthError(null);
     try {
-      const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
+      // Trim the client ID to remove any accidental whitespace from env vars
+      const clientId = (import.meta.env.VITE_GITHUB_CLIENT_ID || "").trim();
+
+      // ── DIAGNOSTIC (safe — client_id is public, no secret logged) ──
+      console.log("[OAuth:GitHub] client_id present:", !!clientId, "| trimmed length:", clientId.length);
+
       if (!clientId) {
-        throw new Error("GitHub client ID is not configured in Vercel settings.");
+        throw new Error("GitHub client ID is not configured. Set VITE_GITHUB_CLIENT_ID in Vercel environment variables.");
       }
-      
-      // CSRF token generation
-      const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
+      // CSRF state token
+      const state = crypto.randomUUID
+        ? crypto.randomUUID().replace(/-/g, "")
+        : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       localStorage.setItem("pramanik_github_state", state);
-      
-      const redirectUri = encodeURIComponent(`${window.location.origin}/auth/github/callback`);
-      const githubUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=read:user%20user:email&state=${state}`;
-      
+
+      // Build URL with URLSearchParams — no manual encoding mistakes
+      const redirectUri = `${window.location.origin}/auth/github/callback`;
+      const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        scope: "read:user user:email",
+        state,
+      });
+      const githubUrl = `https://github.com/login/oauth/authorize?${params.toString()}`;
+
+      // ── DIAGNOSTIC ──
+      console.log("[OAuth:GitHub] authorization URL:", githubUrl);
+
       window.location.href = githubUrl;
     } catch (err) {
+      console.error("[OAuth:GitHub] initiation error:", err);
       setOauthError(err.message || "Failed to initiate GitHub login");
       setLoading(false);
     }
@@ -118,8 +145,12 @@ export default function LoginPage({ onLogin, onBack }) {
         if (!res.ok) {
           throw new Error(typeof data.detail === "string" ? data.detail : "GitHub sign-in failed");
         }
+        console.log("[OAuth:GitHub] callback success, email:", data.email ? "present" : "missing");
+        // Reset loading BEFORE calling onLogin so spinner clears
+        setLoading(false);
         onLogin(data.email, data);
       } catch (err) {
+        console.error("[OAuth:GitHub] callback error:", err);
         setOauthError(err.message || "GitHub sign-in failed");
         setLoading(false);
       }

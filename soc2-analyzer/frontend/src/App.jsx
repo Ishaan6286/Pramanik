@@ -9,7 +9,16 @@ import PramanikAI from "./components/PramanikAI";
 import ComplianceChatBot from "./components/ComplianceChatBot";
 import ChatLauncher from "./components/ChatLauncher";
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID || "").trim();
+// ── DIAGNOSTIC: visible in browser console and Vercel build logs ──
+if (!GOOGLE_CLIENT_ID) {
+  console.error(
+    "[Pramanik] VITE_GOOGLE_CLIENT_ID is not set. " +
+    "Add it in Vercel → Project → Settings → Environment Variables, " +
+    "then redeploy. Google OAuth will not work until this is fixed."
+  );
+}
+console.log("[Pramanik] Google client_id present:", !!GOOGLE_CLIENT_ID, "| trimmed length:", GOOGLE_CLIENT_ID.length);
 
 function AppContent() {
   const [user, setUser] = useState(() => localStorage.getItem("pramanik_user"));
