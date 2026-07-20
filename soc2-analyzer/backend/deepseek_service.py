@@ -270,91 +270,147 @@ You are helping users navigate compliance, audits, and platform usage intelligen
 
 def build_rag_context(query: str) -> str:
     """Build knowledge base context for the query."""
-    query_lower = query.lower()
+    query_lower = query.lower().replace("soc 2", "soc2").replace("soc-2", "soc2")
     relevant_topics = []
-    
+
+    # Broad topic aliases → knowledge keys
+    aliases = {
+        "soc2": ["cc1", "cc6", "cc7"],
+        "access": ["cc6"],
+        "mfa": ["cc6"],
+        "logging": ["cc7"],
+        "monitoring": ["cc7"],
+        "cloudtrail": ["cc7"],
+        "privacy": ["p1", "c1"],
+        "vendor": ["cc9"],
+        "change": ["cc8"],
+        "availability": ["a1"],
+    }
+
+    matched_keys = set()
     for key, value in SOC2_KNOWLEDGE_BASE.items():
         if key in query_lower or value["title"].lower() in query_lower:
-            title = value["title"]
-            controls_str = "\n".join(f"  • {c}" for c in value["controls"])
-            relevant_topics.append(f"{key.upper()}: {title}\n{controls_str}")
-    
+            matched_keys.add(key)
+
+    for alias, keys in aliases.items():
+        if alias in query_lower:
+            matched_keys.update(keys)
+
+    for key in matched_keys:
+        value = SOC2_KNOWLEDGE_BASE[key]
+        title = value["title"]
+        controls_str = "\n".join(f"  • {c}" for c in value["controls"])
+        relevant_topics.append(f"{key.upper()}: {title}\n{controls_str}")
+
     if not relevant_topics:
         # If no specific match, include core controls
         cc6_controls = SOC2_KNOWLEDGE_BASE["cc6"]["controls"]
         cc7_controls = SOC2_KNOWLEDGE_BASE["cc7"]["controls"]
         controls_str = "\n".join(f"  • {c}" for c in cc6_controls + cc7_controls)
         relevant_topics.append(f"CRITICAL CONTROLS:\n{controls_str}")
-    
+
     context = "SOC 2 COMPLIANCE KNOWLEDGE BASE:\n" + "\n\n".join(relevant_topics)
     return context
+
+
+def _fallback_chat(user_question: str, rag_context: str, reason: str) -> dict:
+    """Answer via Groq/Bedrock when Deepseek is unavailable."""
+    from ai_provider import ai
+
+    prompt = (
+        f"KNOWLEDGE BASE CONTEXT:\n{rag_context}\n\n"
+        f"USER QUESTION:\n{user_question}\n\n"
+        "Answer clearly and accurately using the knowledge base when relevant."
+    )
+    response_text = ai.call_llm(
+        prompt=prompt,
+        system=SYSTEM_PROMPT,
+        temperature=0.4,
+        max_tokens=1200,
+    )
+    return {
+        "response": response_text,
+        "sources": [{"control": "SOC2", "title": "Compliance knowledge base"}],
+        "confidence": "medium",
+        "model": f"{ai.name} {ai.model} (fallback)",
+        "fallback_reason": reason,
+        "timestamp": str(__import__("datetime").datetime.utcnow().isoformat()),
+    }
 
 
 def chat_with_rag(user_question: str, conversation_history: list = None) -> dict:
     """
     Execute RAG-enhanced chat with Deepseek V3.2 for intelligent compliance Q&A.
-    
-    Args:
-        user_question: User's compliance question
-        conversation_history: List of previous messages for context (optional)
-    
-    Returns:
-        dict with 'response', 'sources', 'reasoning', 'confidence'
+    Falls back to the configured AI provider (Groq/Bedrock) if Deepseek fails.
     """
+    rag_context = build_rag_context(user_question or "")
+
+    if not (user_question or "").strip():
+        return {
+            "response": "Ask me anything about SOC 2, ISO 27001, HIPAA, policies, or audit prep.",
+            "sources": [],
+            "confidence": "high",
+            "model": "local",
+        }
+
     try:
-        # Build RAG context from knowledge base
-        rag_context = build_rag_context(user_question)
-        
-        # Prepare messages with RAG context
         messages = []
-        
-        # Add conversation history if provided
         if conversation_history:
             messages.extend(conversation_history)
-        
-        # Add current question with RAG context
+
         messages.append({
             "role": "user",
-            "content": f"KNOWLEDGE BASE CONTEXT:\n{rag_context}\n\nUSER QUESTION:\n{user_question}"
+            "content": f"KNOWLEDGE BASE CONTEXT:\n{rag_context}\n\nUSER QUESTION:\n{user_question}",
         })
-        
-        # Call Deepseek V3.2 API via NVIDIA
+
         client = _get_client()
         response = client.chat.completions.create(
-            model="deepseek-ai/deepseek-v3.2",
+            model=os.getenv("DEEPSEEK_MODEL", "deepseek-ai/deepseek-v3.2"),
             messages=[{"role": "system", "content": SYSTEM_PROMPT}] + messages,
             temperature=0.7,
             top_p=0.95,
             max_tokens=2000,
-            extra_body={"chat_template_kwargs": {"thinking": True}},
-            stream=False
+            stream=False,
         )
-        
+
         assistant_response = response.choices[0].message.content
-        
-        # Extract sources from RAG context
+        if not assistant_response or not str(assistant_response).strip():
+            raise Exception("Empty response from Deepseek")
+
         sources = []
         for key, value in SOC2_KNOWLEDGE_BASE.items():
             if key in user_question.lower() or key.upper() in assistant_response:
                 sources.append({
                     "control": key.upper(),
-                    "title": value["title"]
+                    "title": value["title"],
                 })
-        
+
         return {
             "response": assistant_response,
             "sources": sources[:3] if sources else [],
             "confidence": "high" if sources else "medium",
             "model": "deepseek-v3.2 (NVIDIA hosted)",
-            "timestamp": str(__import__('datetime').datetime.utcnow().isoformat())
+            "timestamp": str(__import__("datetime").datetime.utcnow().isoformat()),
         }
-    
+
     except Exception as e:
-        return {
-            "error": str(e),
-            "fallback": "Unable to reach Deepseek V3.2. Please try again or contact support.",
-            "response": "I apologize, but I'm temporarily unavailable. Please use the knowledge base or try asking a simpler question."
-        }
+        print(f"[deepseek_service] Deepseek chat failed, falling back: {e}")
+        try:
+            return _fallback_chat(user_question, rag_context, str(e))
+        except Exception as e2:
+            print(f"[deepseek_service] Fallback AI also failed: {e2}")
+            return {
+                "error": str(e2),
+                "fallback": "Unable to reach AI providers.",
+                "response": (
+                    "SOC 2 (System and Organization Controls 2) is an AICPA trust-services framework "
+                    "that evaluates how a service organization protects customer data across security, "
+                    "availability, processing integrity, confidentiality, and privacy. "
+                    "I'm having trouble reaching the AI service right now — please try again in a moment."
+                ),
+                "sources": [{"control": "SOC2", "title": "Built-in overview"}],
+                "model": "local-fallback",
+            }
 
 
 def generate_compliance_report(scan_results: list, company_name: str) -> str:

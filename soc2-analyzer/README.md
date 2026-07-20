@@ -103,3 +103,71 @@ soc2-analyzer/
 └── sample-data/
     └── sample-aws-config.json
 ```
+
+## Deployment
+
+### Backend — Render
+
+| Setting | Value |
+|---|---|
+| Service Type | Web Service |
+| Root Directory | `soc2-analyzer/backend` |
+| Runtime | Python 3.11 |
+| Build Command | `pip install -r requirements.txt` |
+| Start Command | `uvicorn main:app --host 0.0.0.0 --port $PORT` |
+| Health Check Path | `/api/health` |
+
+**Required environment variables on Render:**
+
+| Variable | Description |
+|---|---|
+| `GROQ_API_KEY` | Groq API key |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Supabase anon key |
+| `SUPABASE_SERVICE_KEY` | Supabase service role key |
+| `DEEPSEEK_API_KEY` | NVIDIA NIM API key |
+| `DEEPSEEK_BASE_URL` | `https://integrate.api.nvidia.com/v1` |
+| `GOOGLE_CLIENT_ID` | Google OAuth Client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret |
+| `CORS_ORIGINS` | Your Vercel frontend URL e.g. `https://pramanik.vercel.app` |
+| `AI_PROVIDER` | `groq` (default) or `bedrock` |
+| `AWS_REGION` | `ap-south-1` |
+| `AWS_ACCESS_KEY_ID` | AWS key (only if using Bedrock AI) |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret (only if using Bedrock AI) |
+
+---
+
+### Frontend — Vercel
+
+| Setting | Value |
+|---|---|
+| Root Directory | `soc2-analyzer/frontend` |
+| Framework Preset | Vite |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+
+**Required environment variables on Vercel:**
+
+| Variable | Description |
+|---|---|
+| `VITE_API_URL` | Your Render backend URL e.g. `https://pramanik-backend.onrender.com` |
+| `VITE_GOOGLE_CLIENT_ID` | Google OAuth Client ID |
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon/public key |
+
+---
+
+### Recommended Deployment Order
+
+1. **Deploy backend on Render first** — note the production URL.
+2. Set `VITE_API_URL=https://<your-render-service>.onrender.com` on Vercel.
+3. **Deploy frontend on Vercel** — note the production URL.
+4. Set `CORS_ORIGINS=https://<your-vercel-app>.vercel.app` on Render and redeploy.
+5. Add your Vercel domain to **Google Cloud Console** → OAuth → Authorized JavaScript Origins.
+
+### Google OAuth (Production)
+
+Add to Google Cloud Console → APIs & Services → Credentials → your OAuth client:
+
+- **Authorized JavaScript Origins**: `https://<your-vercel-domain>.vercel.app`
+- No redirect URI changes needed (app uses popup mode with `redirect_uri: postmessage`).

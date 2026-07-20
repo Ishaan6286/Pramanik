@@ -1,29 +1,63 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useGoogleLogin } from "@react-oauth/google";
 import { Shield, ArrowRight, Lock, Eye, EyeOff, ChevronLeft } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
+import { API_URL } from "../config";
 
 const NODES = [
-  { label: "SOC 2",    x: "8%",  y: "18%", size: 48, delay: 0    },
-  { label: "ISO\n27001", x: "88%", y: "12%", size: 54, delay: 0.3  },
-  { label: "HIPAA",   x: "6%",  y: "72%", size: 44, delay: 0.6  },
-  { label: "GDPR",    x: "90%", y: "65%", size: 48, delay: 0.2  },
-  { label: "NIST",    x: "82%", y: "38%", size: 40, delay: 0.5  },
-  { label: "DPDP",    x: "14%", y: "44%", size: 40, delay: 0.4  },
+  { id: "n1", label: "SOC 2",    x: "8%",  y: "18%", size: 48, delay: 0    },
+  { id: "n2", label: "ISO\n27001", x: "88%", y: "12%", size: 54, delay: 0.3  },
+  { id: "n3", label: "HIPAA",   x: "6%",  y: "72%", size: 44, delay: 0.6  },
+  { id: "n4", label: "DPDP",    x: "90%", y: "65%", size: 48, delay: 0.2  },
+  { id: "n5", label: "SOC 2",   x: "82%", y: "38%", size: 40, delay: 0.5  },
+  { id: "n6", label: "ISO",     x: "14%", y: "44%", size: 40, delay: 0.4  },
 ];
 
 export default function LoginPage({ onLogin, onBack }) {
-  const [showPass, setShowPass] = useState(false);
-  const [focused, setFocused]   = useState(null);
-  const [loading, setLoading]   = useState(false);
+  const [showPass, setShowPass]   = useState(false);
+  const [focused, setFocused]     = useState(null);
+  const [loading, setLoading]     = useState(false);
+  const [oauthError, setOauthError] = useState(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setLoading(true);
+    setOauthError(null);
     setTimeout(() => {
       const email = e.target.email.value || "user@pramanik.ai";
       onLogin(email);
     }, 900);
+  };
+
+  const googleLogin = useGoogleLogin({
+    flow: "auth-code",
+    onSuccess: async (codeResponse) => {
+      setLoading(true);
+      setOauthError(null);
+      try {
+        const res = await fetch(`${API_URL}/api/auth/google`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: codeResponse.code }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(typeof data.detail === "string" ? data.detail : "Google sign-in failed");
+        }
+        onLogin(data.email, data);
+      } catch (err) {
+        setOauthError(err.message || "Google sign-in failed");
+        setLoading(false);
+      }
+    },
+    onError: () => {
+      setOauthError("Google sign-in was cancelled or failed");
+    },
+  });
+
+  const handleGitHubClick = () => {
+    setOauthError("GitHub login will be available soon");
   };
 
   return (
@@ -39,9 +73,9 @@ export default function LoginPage({ onLogin, onBack }) {
 
       {/* ── FLOATING FRAMEWORK NODES — ambient, subtle ── */}
       <div className="absolute inset-0 pointer-events-none z-0 opacity-[0.22]">
-        {NODES.map(({ label, x, y, size, delay }) => (
+        {NODES.map(({ id, label, x, y, size, delay }) => (
           <motion.div
-            key={label}
+            key={id}
             initial={{ opacity: 0, scale: 0.7 }}
             animate={{ opacity: 1, scale: 1, y: [0, -6, 0] }}
             transition={{
@@ -199,45 +233,40 @@ export default function LoginPage({ onLogin, onBack }) {
                 <div className="flex-1 h-px bg-[hsl(var(--col-border))]" />
               </div>
 
-              <div className="grid grid-cols-3 gap-2.5">
-                {[
-                  {
-                    name: "Google",
-                    icon: (
-                      <svg className="w-4 h-4" viewBox="0 0 24 24">
-                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                      </svg>
-                    )
-                  },
-                  {
-                    name: "Microsoft",
-                    icon: (
-                      <svg className="w-4 h-4" viewBox="0 0 24 24">
-                        <path fill="#f35325" d="M1 1h10.5v10.5H1z"/>
-                        <path fill="#81bc06" d="M12.5 1H23v10.5H12.5z"/>
-                        <path fill="#05a6f0" d="M1 12.5h10.5V23H1z"/>
-                        <path fill="#ffba08" d="M12.5 12.5H23V23H12.5z"/>
-                      </svg>
-                    )
-                  },
-                  {
-                    name: "GitHub",
-                    icon: (
-                      <svg className="w-4 h-4 text-[hsl(var(--col-text))]" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
-                      </svg>
-                    )
-                  }
-                ].map(({ name, icon }) => (
-                  <motion.button key={name} type="button" whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}
-                    className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-[10px] border border-[hsl(var(--col-border))] bg-[hsl(var(--col-raise))] hover:border-[hsl(var(--col-primary)/0.35)] hover:bg-[hsl(var(--col-primary)/0.03)] transition-all text-[11px] font-medium text-[hsl(var(--col-sub))]">
-                    {icon}
-                    <span className="hidden sm:inline">{name}</span>
-                  </motion.button>
-                ))}
+              {oauthError && (
+                <p className="text-[12px] text-center text-red-500/90 font-medium">{oauthError}</p>
+              )}
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <motion.button
+                  type="button"
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.97 }}
+                  disabled={loading}
+                  onClick={() => googleLogin()}
+                  className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-[10px] border border-[hsl(var(--col-border))] bg-[hsl(var(--col-raise))] hover:border-[hsl(var(--col-primary)/0.35)] hover:bg-[hsl(var(--col-primary)/0.03)] transition-all text-[11px] font-medium text-[hsl(var(--col-sub))] disabled:opacity-60"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                  </svg>
+                  <span>Google</span>
+                </motion.button>
+
+                <motion.button
+                  type="button"
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleGitHubClick}
+                  className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-[10px] border border-[hsl(var(--col-border))] bg-[hsl(var(--col-raise))] hover:border-[hsl(var(--col-primary)/0.35)] hover:bg-[hsl(var(--col-primary)/0.03)] transition-all text-[11px] font-medium text-[hsl(var(--col-sub))]"
+                >
+                  <svg className="w-4 h-4 text-[hsl(var(--col-text))]" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+                  </svg>
+                  <span>GitHub</span>
+                </motion.button>
               </div>
             </div>
           </form>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import { ThemeProvider } from "./ThemeContext";
 import LandingPage from "./components/LandingPage";
 import LoginPage from "./components/LoginPage";
@@ -8,15 +9,21 @@ import PramanikAI from "./components/PramanikAI";
 import ComplianceChatBot from "./components/ComplianceChatBot";
 import ChatLauncher from "./components/ChatLauncher";
 
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+
 function AppContent() {
-  const [page, setPage] = useState("landing"); // landing | login | upload | dashboard | pramanik | chat
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => localStorage.getItem("pramanik_user"));
+  const [page, setPage] = useState(() => (localStorage.getItem("pramanik_user") ? "upload" : "landing"));
   const [analysisData, setAnalysisData] = useState(null);
   const [uploadedConfig, setUploadedConfig] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = (email) => {
+  const handleLogin = (email, profile) => {
     setUser(email);
+    localStorage.setItem("pramanik_user", email);
+    if (profile) {
+      localStorage.setItem("pramanik_profile", JSON.stringify(profile));
+    }
     setPage("upload");
   };
 
@@ -24,6 +31,8 @@ function AppContent() {
     setUser(null);
     setAnalysisData(null);
     setUploadedConfig(null);
+    localStorage.removeItem("pramanik_user");
+    localStorage.removeItem("pramanik_profile");
     setPage("landing");
   };
 
@@ -96,8 +105,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </GoogleOAuthProvider>
   );
 }

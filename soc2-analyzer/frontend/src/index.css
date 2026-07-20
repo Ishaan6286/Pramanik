@@ -1,5 +1,5 @@
-/* ─── Google Fonts ─── */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+/* ─── Fonts ─── */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,19 +9,19 @@
 @layer base {
   :root {
     /* Foundation — warm off-white, not stark */
-    --col-bg:       160 14% 96%;      /* #F3F6F4 warm off-white */
-    --col-surface:  0 0% 100%;        /* Pure white card surface */
-    --col-raise:    160 10% 98%;      /* Slightly lifted */
-    --col-border:   160 10% 90%;      /* Warm light separator */
+    --col-bg:       160 14% 96%;
+    --col-surface:  0 0% 100%;
+    --col-raise:    160 10% 98%;
+    --col-border:   160 10% 90%;
 
-    /* Brand Primary — muted teal/green */
-    --col-primary:  168 46% 35%;      /* #2F7D6E muted teal */
-    --col-accent:   152 36% 40%;      /* Soft green */
+    /* Brand Primary — muted teal */
+    --col-primary:  172 55% 38%;
+    --col-accent:   198 42% 42%;
 
     /* Text Hierarchy */
-    --col-text:     220 14% 18%;      /* #1F2937 near-black */
-    --col-sub:      220 10% 40%;      /* #5B6373 */
-    --col-muted:    220 8%  54%;      /* #6B7280 */
+    --col-text:     220 14% 18%;
+    --col-sub:      220 10% 40%;
+    --col-muted:    220 8%  54%;
 
     /* Legacy Aliases */
     --accent:         hsl(var(--col-primary));
@@ -35,20 +35,20 @@
   }
 
   .dark {
-    /* Foundation — deep slate, not pure black */
-    --col-bg:       222 22% 8%;        /* #0F172A deep slate */
-    --col-surface:  222 20% 11%;       /* #111827 */
-    --col-raise:    222 17% 15%;       /* #1F2937 */
-    --col-border:   222 16% 20%;       /* Smooth separator */
+    /* Foundation — deep ink */
+    --col-bg:       210 22% 6%;
+    --col-surface:  212 20% 9%;
+    --col-raise:    213 18% 12%;
+    --col-border:   214 16% 18%;
 
-    /* Brand — slightly brighter teal for dark contrast */
-    --col-primary:  168 52% 44%;       /* Teal, not neon */
-    --col-accent:   152 44% 46%;       /* Emerald, toned */
+    /* Brand — teal accent */
+    --col-primary:  172 63% 46%;
+    --col-accent:   198 55% 55%;
 
-    /* Text — warm off-white, never pure white */
-    --col-text:     210 18% 90%;       /* #E2E8F0 */
-    --col-sub:      210 14% 68%;       /* #94A3B8 */
-    --col-muted:    210 10% 50%;       /* #6B7280 */
+    /* Text */
+    --col-text:     204 33% 96%;
+    --col-sub:      215 16% 65%;
+    --col-muted:    215 12% 52%;
 
     /* Legacy aliases */
     --bg-primary:     hsl(var(--col-bg));
@@ -81,7 +81,7 @@
   body {
     background-color: hsl(var(--col-bg));
     color: hsl(var(--col-text));
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
     font-size: 15px;
     line-height: 1.6;
   }
@@ -104,8 +104,8 @@
 @layer components {
 
   /* Typography helpers */
-  .font-display { font-family: 'Inter', sans-serif; letter-spacing: -0.025em; }
-  .font-mono    { font-family: 'JetBrains Mono', monospace; letter-spacing: 0; }
+  .font-display { font-family: 'Syne', system-ui, sans-serif; letter-spacing: -0.025em; }
+  .font-mono    { font-family: 'IBM Plex Mono', monospace; letter-spacing: 0; }
 
   /* ── Surface Cards ── */
   .surface {
@@ -158,7 +158,7 @@
     border: 1px solid hsl(var(--col-primary) / 0.28);
     color: hsl(var(--col-primary));
     font-weight: 600;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
     font-size: 13px;
     cursor: pointer;
     white-space: nowrap;
@@ -190,7 +190,7 @@
     border: 1px solid transparent;
     color: white;
     font-weight: 600;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
     font-size: 14px;
     cursor: pointer;
     white-space: nowrap;
@@ -221,7 +221,7 @@
     border: 1px solid hsl(var(--col-border));
     color: hsl(var(--col-text));
     font-weight: 600;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
     font-size: 13px;
     cursor: pointer;
     white-space: nowrap;

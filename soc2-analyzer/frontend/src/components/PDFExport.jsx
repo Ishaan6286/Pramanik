@@ -129,7 +129,7 @@ export default function PDFExport({ data }) {
     doc.setFontSize(8);
     doc.setTextColor(100, 120, 150);
     doc.setFont("helvetica", "normal");
-    doc.text("Autonomous Trust Platform", margin + 30, 12);
+    doc.text("AI-assisted compliance knowledge", margin + 30, 12);
 
     // ── Framework badge row (small pills) ──
     let bx = margin;

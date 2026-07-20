@@ -20,7 +20,8 @@ import urllib.request
 import urllib.error
 
 # Optional: set GITHUB_DEFAULT_TOKEN in .env to avoid rate limits on public repos
-_DEFAULT_TOKEN = os.getenv("GITHUB_DEFAULT_TOKEN", "")
+def _default_token() -> str:
+    return (os.getenv("GITHUB_DEFAULT_TOKEN") or os.getenv("GITHUB_TOKEN") or "").strip()
 
 
 # ── 15 Compliance Violation Patterns ─────────────────────────────────────────
@@ -319,16 +320,34 @@ SCANNABLE_EXTENSIONS = {
 
 def _github_request(url: str, token: Optional[str] = None) -> dict:
     """Make a GitHub API GET request."""
-    req = urllib.request.Request(url)
-    req.add_header("Accept", "application/vnd.github+json")
-    req.add_header("X-GitHub-Api-Version", "2022-11-28")
-    effective_token = token or _DEFAULT_TOKEN
-    if effective_token:
-        req.add_header("Authorization", f"Bearer {effective_token}")
-    try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+    provided_token = (token or "").strip()
+    effective_token = provided_token or _default_token()
+
+    def _do_request(auth_token: Optional[str]) -> dict:
+        req = urllib.request.Request(url)
+        req.add_header("Accept", "application/vnd.github+json")
+        req.add_header("X-GitHub-Api-Version", "2022-11-28")
+        req.add_header("User-Agent", "Pramanik-Compliance-Scanner")
+        if auth_token:
+            req.add_header("Authorization", f"Bearer {auth_token}")
+        with urllib.request.urlopen(req, timeout=15) as resp:
             return json.loads(resp.read().decode())
+
+    try:
+        return _do_request(effective_token or None)
     except urllib.error.HTTPError as e:
+        # Bad/expired default token — retry unauthenticated for public repos
+        if e.code == 401 and effective_token and not provided_token:
+            try:
+                return _do_request(None)
+            except urllib.error.HTTPError:
+                pass
+        if e.code == 401:
+            raise Exception(
+                "GitHub authentication failed (401). "
+                "Your token is invalid or expired. Leave the token blank for public repos, "
+                "or paste a valid personal access token from github.com/settings/tokens"
+            )
         if e.code == 403:
             raise Exception(
                 "GitHub API rate limit reached (60 req/hour for unauthenticated). "
@@ -336,7 +355,10 @@ def _github_request(url: str, token: Optional[str] = None) -> dict:
                 "Create one at: github.com/settings/tokens (no scopes needed for public repos)"
             )
         if e.code == 404:
-            raise Exception(f"Repository not found: {url}. Check the URL is correct and the repo is public.")
+            raise Exception(
+                f"Repository not found. Check the URL is correct and the repo is public "
+                f"(or provide a token with access)."
+            )
         raise Exception(f"GitHub API error {e.code}: {url}")
 
 
@@ -369,6 +391,53 @@ def fetch_file_content(owner: str, repo: str, path: str, token: Optional[str] = 
     if data.get("encoding") == "base64":
         return base64.b64decode(data["content"]).decode("utf-8", errors="replace")
     return data.get("content", "")
+
+
+def _clone_repo(repo_url: str, token: Optional[str] = None) -> str:
+    """Shallow-clone a repo to a temp dir. Bypasses GitHub API rate limits."""
+    owner, repo = parse_repo_url(repo_url)
+    tmpdir = tempfile.mkdtemp(prefix="pramanik_clone_")
+    if token:
+        clone_url = f"https://x-access-token:{token}@github.com/{owner}/{repo}.git"
+    else:
+        clone_url = f"https://github.com/{owner}/{repo}.git"
+
+    try:
+        result = subprocess.run(
+            ["git", "clone", "--depth", "1", "--single-branch", clone_url, tmpdir],
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+        if result.returncode != 0:
+            err = (result.stderr or result.stdout or "unknown clone error").strip()
+            raise Exception(err[:400])
+        return tmpdir
+    except Exception:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        raise
+
+
+def _local_file_tree(root: str) -> list:
+    """Build an API-compatible file tree from a local git checkout."""
+    files = []
+    root_path = Path(root)
+    for path in root_path.rglob("*"):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(root_path).as_posix()
+        if rel == ".git" or rel.startswith(".git/"):
+            continue
+        try:
+            size = path.stat().st_size
+        except OSError:
+            size = 0
+        files.append({"path": rel, "size": size, "type": "blob"})
+    return files
+
+
+def _read_local_file(root: str, path: str) -> str:
+    return (Path(root) / path).read_text(encoding="utf-8", errors="replace")
 
 
 # ── Scanners ──────────────────────────────────────────────────────────────────
@@ -737,7 +806,7 @@ def _parse_requirements_txt(content: str) -> dict:
     return deps
 
 
-def scan_dependencies_osv(owner: str, repo: str, token: Optional[str], all_files: list) -> list:
+def scan_dependencies_osv(owner: str, repo: str, token: Optional[str], all_files: list, get_content=None) -> list:
     """
     Check package.json and requirements.txt for known CVEs using OSV.dev (free, no key needed).
     Returns findings in our standard format.
@@ -756,7 +825,10 @@ def scan_dependencies_osv(owner: str, repo: str, token: Optional[str], all_files
 
         ecosystem, parser = dep_files[filename]
         try:
-            content = fetch_file_content(owner, repo, path, token)
+            if get_content:
+                content = get_content(path)
+            else:
+                content = fetch_file_content(owner, repo, path, token)
             packages = parser(content)
         except Exception:
             continue
@@ -826,138 +898,160 @@ def scan_dependencies_osv(owner: str, repo: str, token: Optional[str], all_files
 def scan_repository(repo_url: str, token: Optional[str] = None, max_files: int = 500) -> dict:
     """
     Full scan of a GitHub repository.
-    Returns findings in a format compatible with the rest of the pipeline.
+    Uses the GitHub API when available; falls back to a shallow git clone
+    when the API is rate-limited or unauthorized (public repos).
     """
     owner, repo = parse_repo_url(repo_url)
+    local_root = None
 
-    # Get all files
-    all_files = fetch_file_tree(owner, repo, token)
-    total_files = len(all_files)
+    def get_content(path: str) -> str:
+        if local_root:
+            return _read_local_file(local_root, path)
+        return fetch_file_content(owner, repo, path, token)
 
-    # Filter to scannable files — skip noise dirs, lock files, minified files
-    high_priority = []
-    normal = []
-
-    for f in all_files:
-        path = f["path"]
-        filename = path.split("/")[-1].lower()
-        parts = path.split("/")
-
-        # Skip noise directories
-        if any(part in SKIP_DIRS for part in parts[:-1]):
-            continue
-
-        # Skip specific junk filenames and suffixes
-        if filename in SKIP_FILENAMES:
-            continue
-        if any(filename.endswith(sfx) for sfx in SKIP_SUFFIXES):
-            continue
-
-        # Skip very large files (>500KB) — likely generated/binary
-        if f.get("size", 0) > 500_000:
-            continue
-
-        ext = "." + path.rsplit(".", 1)[-1] if "." in path else ""
-        if ext not in SCANNABLE_EXTENSIONS and not path.endswith(".env"):
-            continue
-
-        # Prioritize high-risk files (routes, config, auth, .env, terraform)
-        path_lower = path.lower()
-        if any(p in path_lower for p in HIGH_PRIORITY_PATTERNS):
-            high_priority.append(f)
-        else:
-            normal.append(f)
-
-    # Scan high-priority files first, then normal — up to max_files total
-    scannable = high_priority + normal
-    scannable = scannable[:max_files]
-
-    existing_paths = {f["path"].lower() for f in all_files}
-
-    # Fetch and scan files in parallel (10 concurrent threads)
-    all_findings = []
-    files_scanned = 0
-    errors = []
-    file_contents = {}  # Keep for semgrep
-
-    def _fetch_and_scan(file_info):
-        path = file_info["path"]
-        content = fetch_file_content(owner, repo, path, token)
-        return path, content, scan_file(path, content)
-
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {executor.submit(_fetch_and_scan, f): f for f in scannable}
-        for future in as_completed(futures):
-            try:
-                path, content, findings = future.result()
-                file_contents[path] = content
-                all_findings.extend(findings)
-                files_scanned += 1
-            except Exception as e:
-                errors.append(str(e))
-
-    # Semgrep scan (if installed) — runs on all fetched file contents
-    semgrep_findings = scan_with_semgrep(file_contents)
-    all_findings.extend(semgrep_findings)
-
-    # OSV dependency CVE scan — checks package.json and requirements.txt
     try:
-        dep_findings = scan_dependencies_osv(owner, repo, token, all_files)
-        all_findings.extend(dep_findings)
-    except Exception as e:
-        errors.append(f"OSV scan error: {e}")
+        # Prefer API; fall back to git clone on rate-limit / auth failures
+        try:
+            all_files = fetch_file_tree(owner, repo, token)
+        except Exception as api_err:
+            err_text = str(api_err).lower()
+            if any(s in err_text for s in ("rate limit", "authentication failed", "401", "403")):
+                print(f"[github_agent] API unavailable ({api_err}); falling back to git clone")
+                local_root = _clone_repo(repo_url, token)
+                all_files = _local_file_tree(local_root)
+            else:
+                raise
 
-    # Policy agent check
-    policy_status = check_policy_docs(owner, repo, token, existing_paths)
+        total_files = len(all_files)
 
-    # Add missing policy docs as findings
-    for doc in policy_status["missing"]:
-        all_findings.append({
-            "pattern_id": "POLICY-MISSING",
-            "name": f"Missing: {doc['name']}",
-            "file": doc["path"],
-            "line": 0,
-            "line_content": "File does not exist",
-            "controls": [doc["control"]],
-            "frameworks": ["soc2", "iso27001"],
-            "severity": "MEDIUM",
-            "message": f"{doc['name']} not found in repository.",
-            "fix": f"Create {doc['path']} with your security/privacy policy content.",
-        })
+        # Filter to scannable files — skip noise dirs, lock files, minified files
+        high_priority = []
+        normal = []
 
-    # AWS CloudTrail detection from code
-    trail_info = detect_aws_trails_in_code(all_findings, all_files)
+        for f in all_files:
+            path = f["path"]
+            filename = path.split("/")[-1].lower()
+            parts = path.split("/")
 
-    # Severity counts
-    severity_counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
-    for f in all_findings:
-        sev = f.get("severity", "MEDIUM")
-        severity_counts[sev] = severity_counts.get(sev, 0) + 1
+            # Skip noise directories
+            if any(part in SKIP_DIRS for part in parts[:-1]):
+                continue
 
-    # Unique controls affected
-    affected_controls = list({c for f in all_findings for c in f.get("controls", [])})
+            # Skip specific junk filenames and suffixes
+            if filename in SKIP_FILENAMES:
+                continue
+            if any(filename.endswith(sfx) for sfx in SKIP_SUFFIXES):
+                continue
 
-    # Frameworks affected
-    affected_frameworks = list({fw for f in all_findings for fw in f.get("frameworks", [])})
+            # Skip very large files (>500KB) — likely generated/binary
+            if f.get("size", 0) > 500_000:
+                continue
 
-    return {
-        "repo": f"{owner}/{repo}",
-        "repo_url": repo_url,
-        "total_files": total_files,
-        "files_scanned": files_scanned,
-        "total_findings": len(all_findings),
-        "findings": all_findings,
-        "severity_counts": severity_counts,
-        "affected_controls": affected_controls,
-        "affected_frameworks": affected_frameworks,
-        "policy_status": policy_status,
-        "trail_info": trail_info,
-        "errors": errors[:5],
-        "scanners_used": {
-            "regex": True,
-            "semgrep": _semgrep_available(),
-            "osv_cve": len([f for f in all_findings if f.get("source") == "osv"]) > 0,
-            "semgrep_findings": len(semgrep_findings),
-            "dep_findings": len([f for f in all_findings if f.get("source") == "osv"]),
-        },
-    }
+            ext = "." + path.rsplit(".", 1)[-1] if "." in path else ""
+            if ext not in SCANNABLE_EXTENSIONS and not path.endswith(".env"):
+                continue
+
+            # Prioritize high-risk files (routes, config, auth, .env, terraform)
+            path_lower = path.lower()
+            if any(p in path_lower for p in HIGH_PRIORITY_PATTERNS):
+                high_priority.append(f)
+            else:
+                normal.append(f)
+
+        # Scan high-priority files first, then normal — up to max_files total
+        scannable = high_priority + normal
+        scannable = scannable[:max_files]
+
+        existing_paths = {f["path"].lower() for f in all_files}
+
+        # Fetch and scan files in parallel (10 concurrent threads)
+        all_findings = []
+        files_scanned = 0
+        errors = []
+        file_contents = {}  # Keep for semgrep
+
+        def _fetch_and_scan(file_info):
+            path = file_info["path"]
+            content = get_content(path)
+            return path, content, scan_file(path, content)
+
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = {executor.submit(_fetch_and_scan, f): f for f in scannable}
+            for future in as_completed(futures):
+                try:
+                    path, content, findings = future.result()
+                    file_contents[path] = content
+                    all_findings.extend(findings)
+                    files_scanned += 1
+                except Exception as e:
+                    errors.append(str(e))
+
+        # Semgrep scan (if installed) — runs on all fetched file contents
+        semgrep_findings = scan_with_semgrep(file_contents)
+        all_findings.extend(semgrep_findings)
+
+        # OSV dependency CVE scan — checks package.json and requirements.txt
+        try:
+            dep_findings = scan_dependencies_osv(owner, repo, token, all_files, get_content=get_content)
+            all_findings.extend(dep_findings)
+        except Exception as e:
+            errors.append(f"OSV scan error: {e}")
+
+        # Policy agent check
+        policy_status = check_policy_docs(owner, repo, token, existing_paths)
+
+        # Add missing policy docs as findings
+        for doc in policy_status["missing"]:
+            all_findings.append({
+                "pattern_id": "POLICY-MISSING",
+                "name": f"Missing: {doc['name']}",
+                "file": doc["path"],
+                "line": 0,
+                "line_content": "File does not exist",
+                "controls": [doc["control"]],
+                "frameworks": ["soc2", "iso27001"],
+                "severity": "MEDIUM",
+                "message": f"{doc['name']} not found in repository.",
+                "fix": f"Create {doc['path']} with your security/privacy policy content.",
+            })
+
+        # AWS CloudTrail detection from code
+        trail_info = detect_aws_trails_in_code(all_findings, all_files)
+
+        # Severity counts
+        severity_counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+        for f in all_findings:
+            sev = f.get("severity", "MEDIUM")
+            severity_counts[sev] = severity_counts.get(sev, 0) + 1
+
+        # Unique controls affected
+        affected_controls = list({c for f in all_findings for c in f.get("controls", [])})
+
+        # Frameworks affected
+        affected_frameworks = list({fw for f in all_findings for fw in f.get("frameworks", [])})
+
+        return {
+            "repo": f"{owner}/{repo}",
+            "repo_url": repo_url,
+            "total_files": total_files,
+            "files_scanned": files_scanned,
+            "total_findings": len(all_findings),
+            "findings": all_findings,
+            "severity_counts": severity_counts,
+            "affected_controls": affected_controls,
+            "affected_frameworks": affected_frameworks,
+            "policy_status": policy_status,
+            "trail_info": trail_info,
+            "errors": errors[:5],
+            "scanners_used": {
+                "regex": True,
+                "semgrep": _semgrep_available(),
+                "osv_cve": len([f for f in all_findings if f.get("source") == "osv"]) > 0,
+                "semgrep_findings": len(semgrep_findings),
+                "dep_findings": len([f for f in all_findings if f.get("source") == "osv"]),
+                "git_clone_fallback": local_root is not None,
+            },
+        }
+    finally:
+        if local_root:
+            shutil.rmtree(local_root, ignore_errors=True)

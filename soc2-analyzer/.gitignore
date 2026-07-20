@@ -1,9 +1,13 @@
 node_modules/
 .env
+.env.local
+.env.production
 dist/
 .DS_Store
 *.log
+*.pem
 __pycache__/
 *.pyc
 .venv/
 venv/
+.pytest_cache/

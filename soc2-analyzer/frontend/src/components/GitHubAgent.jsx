@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Github, Code, Shield, AlertTriangle, FileText, Zap, Check, ChevronDown, ChevronRight, Eye, ExternalLink, Package, Wrench, Loader, GitPullRequest } from "lucide-react";
+import { Github, Code, Shield, FileText, Zap, Check, ChevronDown, ChevronRight, Eye, ExternalLink, Package, Wrench, Loader, GitPullRequest } from "lucide-react";
 import { API_URL } from "../config";
+import "./GitHubAgent.css";
 
 /** Read JSON from fetch; if the server returns HTML (wrong port / SPA), show a clear error. */
 async function readApiJson(resp) {
@@ -21,49 +22,36 @@ async function readApiJson(resp) {
 }
 
 const AGENTS = [
-  { id: "code", name: "Code Agent", desc: "Scanning source files", icon: Code, color: "#4F46E5" },
-  { id: "policy", name: "Policy Agent", desc: "Checking documentation", icon: FileText, color: "#059669" },
-  { id: "adversary", name: "Adversary Agent", desc: "Challenging findings", icon: Eye, color: "#D97706" },
-  { id: "ces", name: "CES Engine", desc: "Scoring by compliance impact", icon: Zap, color: "#7C3AED" },
-  { id: "reporter", name: "Reporter", desc: "Compiling report", icon: Shield, color: "#DB2777" },
+  { id: "code", name: "Code Agent", desc: "Inspecting repository structure", icon: Code },
+  { id: "policy", name: "Policy Agent", desc: "Checking documentation", icon: FileText },
+  { id: "adversary", name: "Adversary Agent", desc: "Challenging findings", icon: Eye },
+  { id: "ces", name: "CES Engine", desc: "Evaluating evidence", icon: Zap },
+  { id: "reporter", name: "Reporter", desc: "Preparing results", icon: Shield },
 ];
 
-const SEV = {
-  CRITICAL: { bg: "#FEF2F2", color: "#DC2626", dot: "#DC2626" },
-  HIGH: { bg: "#FFFBEB", color: "#D97706", dot: "#D97706" },
-  MEDIUM: { bg: "#FEFCE8", color: "#CA8A04", dot: "#CA8A04" },
-  LOW: { bg: "#F0FDF4", color: "#16A34A", dot: "#16A34A" },
+const SEV_CLASS = {
+  CRITICAL: "sw-chip--critical",
+  HIGH: "sw-chip--high",
+  MEDIUM: "sw-chip--medium",
+  LOW: "sw-chip--low",
 };
 
 const VERDICT = {
-  CONFIRMED: { label: "Confirmed", color: "#DC2626", bg: "#FEF2F2" },
-  INSUFFICIENT_FIX: { label: "Fix Insufficient", color: "#D97706", bg: "#FFFBEB" },
-  ESCALATE: { label: "Escalate", color: "#7C2D12", bg: "#FFF7ED" },
-  FALSE_POSITIVE: { label: "False Positive", color: "#6B7280", bg: "#F9FAFB" },
-};
-
-const card = {
-  background: "#FFFFFF",
-  borderRadius: 16,
-  padding: 24,
-  boxShadow: "0 1px 3px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05)",
-  marginBottom: 16,
-  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-  border: "1px solid transparent",
+  CONFIRMED: { label: "Confirmed", className: "sw-chip--high" },
+  INSUFFICIENT_FIX: { label: "Fix Insufficient", className: "sw-chip--medium" },
+  ESCALATE: { label: "Escalate", className: "sw-chip--critical" },
+  FALSE_POSITIVE: { label: "False Positive", className: "sw-chip" },
 };
 
 function SevBadge({ sev }) {
-  const c = SEV[sev] || SEV.LOW;
   return (
-    <span style={{ padding: "3px 10px", borderRadius: 100, fontSize: 12.5, fontWeight: 700, background: c.bg, color: c.color }}>
-      {sev}
-    </span>
+    <span className={`sw-sev sw-chip ${SEV_CLASS[sev] || SEV_CLASS.LOW}`}>{sev}</span>
   );
 }
 
 export default function GitHubAgent({ onResults, selectedFrameworks, loading, setLoading }) {
   const [repoUrl, setRepoUrl] = useState("");
-  const [token, setToken] = useState("");
+  const [token, setToken] = useState(() => sessionStorage.getItem("pramanik_gh_token") || "");
   const [showToken, setShowToken] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState(null);
@@ -73,6 +61,8 @@ export default function GitHubAgent({ onResults, selectedFrameworks, loading, se
   const [fixResults, setFixResults] = useState({});
   const [showAllQuestions, setShowAllQuestions] = useState(false);
   const [agentStages, setAgentStages] = useState(AGENTS.map(a => ({ ...a, status: "pending", progress: 0 })));
+  const [tokenModal, setTokenModal] = useState(null);
+  const [modalToken, setModalToken] = useState("");
   const timerRef = useRef(null);
 
   const questionsWrapRef = useRef(null);
@@ -81,28 +71,64 @@ export default function GitHubAgent({ onResults, selectedFrameworks, loading, se
     // Height sync removed as requested
   }, []);
 
-  const handleAutoFix = async (file, finding, idx) => {
+  const saveToken = (value) => {
+    const trimmed = value.trim();
+    setToken(trimmed);
+    if (trimmed) sessionStorage.setItem("pramanik_gh_token", trimmed);
+    else sessionStorage.removeItem("pramanik_gh_token");
+    return trimmed;
+  };
+
+  const runAutoFix = async (file, finding, idx, authToken) => {
     const key = `${file}:${idx}`;
-    if (!token.trim()) {
-      setFixResults(p => ({ ...p, [key]: { error: "GitHub token with repo scope required for auto-fix" } }));
-      return;
-    }
     setFixingKey(key);
     setFixResults(p => ({ ...p, [key]: {} }));
     try {
       const resp = await fetch(`${API_URL}/api/auto-fix`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repo_url: repoUrl.trim(), token: token.trim(), file_path: file, finding }),
+        body: JSON.stringify({
+          repo_url: repoUrl.trim(),
+          token: authToken,
+          file_path: file,
+          finding,
+        }),
       });
       const data = await readApiJson(resp);
-      if (!resp.ok) throw new Error(data.detail || "Auto-fix failed");
-      setFixResults(p => ({ ...p, [key]: { pr_url: data.pr_url, pr_number: data.pr_number } }));
+      if (!resp.ok) {
+        const detail = typeof data.detail === "string" ? data.detail : "Auto-fix failed";
+        throw new Error(detail);
+      }
+      setFixResults(p => ({
+        ...p,
+        [key]: {
+          pr_url: data.pr_url,
+          pr_number: data.pr_number,
+          branch: data.branch,
+        },
+      }));
     } catch (e) {
       setFixResults(p => ({ ...p, [key]: { error: e.message } }));
     } finally {
       setFixingKey(null);
     }
+  };
+
+  const handleAutoFix = async (file, finding, idx) => {
+    if (!token.trim()) {
+      setModalToken("");
+      setTokenModal({ file, finding, idx });
+      return;
+    }
+    await runAutoFix(file, finding, idx, token.trim());
+  };
+
+  const confirmTokenAndFix = async () => {
+    if (!tokenModal || !modalToken.trim()) return;
+    const saved = saveToken(modalToken);
+    const pending = tokenModal;
+    setTokenModal(null);
+    await runAutoFix(pending.file, pending.finding, pending.idx, saved);
   };
 
   const startAnimation = () => {
@@ -145,7 +171,16 @@ export default function GitHubAgent({ onResults, selectedFrameworks, loading, se
       });
       finishAll();
       const data = await readApiJson(resp);
-      if (!resp.ok) throw new Error(data.detail || "Scan failed");
+      if (!resp.ok) {
+        const detail = typeof data.detail === "string" ? data.detail : "Scan failed";
+        if (/rate limit/i.test(detail) && !token.trim()) {
+          throw new Error(
+            "GitHub API rate limit hit (60 requests/hour without a token). " +
+            "Paste a personal access token above and try again — create one at github.com/settings/tokens (no scopes needed for public repos)."
+          );
+        }
+        throw new Error(detail);
+      }
       setResults(data);
     } catch (e) {
       setError(e.message);
@@ -157,95 +192,95 @@ export default function GitHubAgent({ onResults, selectedFrameworks, loading, se
     ? (results.raw_findings || []).reduce((acc, f) => { const k = f.file || "unknown"; if (!acc[k]) acc[k] = []; acc[k].push(f); return acc; }, {})
     : {};
 
-  const inp = {
-    width: "100%", padding: "11px 14px", borderRadius: 10,
-    border: "1.5px solid #E5E7EB", fontSize: 14, color: "#111827",
-    background: "#FAFAF8", outline: "none", fontFamily: "inherit",
-  };
-
   return (
-    <div style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } } * { box-sizing: border-box; }`}</style>
-
-      {/* Input card */}
-      <div style={card}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
-          <Github size={18} color="#4F46E5" />
-          <span style={{ fontWeight: 700, fontSize: 16, color: "#111827" }}>GitHub Repository Scanner</span>
+    <div className="sw">
+      <div className="sw-card">
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 14 }}>
+          <div className="sw-agent-icon" aria-hidden="true"><Github size={16} /></div>
+          <div>
+            <h3 className="sw-title">GitHub Repository Scanner</h3>
+            <p className="sw-desc">Analyze a public or authorized repository against selected compliance controls.</p>
+          </div>
         </div>
 
+        <label className="sw-label" htmlFor="gh-repo-url">Repository URL</label>
         <input
-          style={{ ...inp, marginBottom: 10 }}
+          id="gh-repo-url"
+          className="sw-input"
+          style={{ marginBottom: 12 }}
           placeholder="https://github.com/owner/repository"
           value={repoUrl}
           onChange={e => setRepoUrl(e.target.value)}
           onKeyDown={e => e.key === "Enter" && handleScan()}
         />
 
-        <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+        <label className="sw-label" htmlFor="gh-token">Access Token (optional)</label>
+        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
           <input
-            style={{ ...inp, flex: 1, fontFamily: "monospace", fontSize: 13 }}
+            id="gh-token"
+            className="sw-input sw-input--mono"
+            style={{ flex: 1 }}
             type={showToken ? "text" : "password"}
-            placeholder="GitHub Token (optional — for private repos)"
+            placeholder="GitHub token — optional for public repos"
             value={token}
-            onChange={e => setToken(e.target.value)}
+            onChange={e => saveToken(e.target.value)}
+            autoComplete="off"
           />
-          <button
-            onClick={() => setShowToken(s => !s)}
-            style={{ padding: "11px 14px", borderRadius: 10, border: "1.5px solid #E5E7EB", background: "#FAFAF8", color: "#6B7280", fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}
-          >
+          <button type="button" className="sw-btn sw-btn--ghost" onClick={() => setShowToken(s => !s)}>
             {showToken ? "Hide" : "Show"}
           </button>
         </div>
-        <p style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 18 }}>Public repos work without a token.</p>
+        <p style={{ fontSize: 12, color: "hsl(var(--col-muted))", marginBottom: 16, lineHeight: 1.45 }}>
+          Public repositories can be scanned without a token. A token may help with API limits or private repos.
+          Auto-Fix pull requests need a{" "}
+          <a className="sw-link" href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer">
+            personal access token
+          </a>{" "}
+          with the <code style={{ fontSize: 11 }}>repo</code> scope.
+        </p>
 
         <button
+          type="button"
+          className="sw-btn sw-btn--primary"
           onClick={handleScan}
           disabled={!repoUrl.trim() || scanning}
-          style={{
-            width: "100%", padding: "13px", borderRadius: 12,
-            background: repoUrl.trim() && !scanning ? "#4F46E5" : "#E5E7EB",
-            color: repoUrl.trim() && !scanning ? "#FFF" : "#9CA3AF",
-            fontSize: 14, fontWeight: 600, border: "none",
-            cursor: repoUrl.trim() && !scanning ? "pointer" : "not-allowed",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-          }}
         >
           {scanning
-            ? <><span style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> Agents running...</>
-            : <><Github size={16} /> Launch Agents</>
-          }
+            ? <><Loader size={15} className="sw-spin" /> Analyzing repository...</>
+            : <><Github size={15} /> Launch Agents</>}
         </button>
       </div>
 
-      {/* Agent pipeline */}
       {(scanning || results) && (
-        <div style={{ ...card, padding: 20 }}>
-          <p style={{ fontSize: 12, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 14 }}>Agent Pipeline</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="sw-card">
+          <p className="sw-kicker" style={{ marginBottom: 12 }}>Analysis pipeline</p>
+          {scanning && repoUrl && (
+            <p style={{ fontSize: 13, color: "hsl(var(--col-sub))", margin: "0 0 12px" }}>
+              Analyzing repository · <span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: 12 }}>{repoUrl.replace(/^https?:\/\/github\.com\//, "")}</span>
+            </p>
+          )}
+          <div className="sw-pipeline-list">
             {agentStages.map(agent => {
               const Icon = agent.icon;
               const done = agent.status === "done";
               const running = agent.status === "running";
+              const stateClass = done ? "sw-agent--done" : running ? "sw-agent--running" : "sw-agent--pending";
               return (
-                <div key={agent.id} style={{ display: "flex", alignItems: "center", gap: 12, opacity: agent.status === "pending" ? 0.35 : 1, transition: "opacity 0.3s" }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: agent.color + "15", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    {done
-                      ? <Check size={14} color={agent.color} strokeWidth={2.5} />
-                      : <Icon size={14} color={agent.color} />
-                    }
+                <div key={agent.id} className={`sw-agent ${stateClass}`}>
+                  <div className={`sw-agent-icon ${done ? "sw-agent-icon--done" : ""}`} aria-hidden="true">
+                    {done ? <Check size={14} strokeWidth={2.5} /> : <Icon size={14} />}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: running ? 4 : 0 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{agent.name}</span>
-                      <span style={{ fontSize: 11, color: done ? "#059669" : agent.color }}>
-                        {done ? "Done" : running ? `${Math.round(agent.progress)}%` : ""}
+                  <div>
+                    <div className="sw-agent-top">
+                      <span className="sw-agent-name">{agent.name}</span>
+                      <span className={`sw-agent-status ${done ? "sw-agent-status--done" : running ? "sw-agent-status--running" : ""}`}>
+                        {done ? "Completed" : running ? "Running" : "Pending"}
                       </span>
                     </div>
-                    {!done && <p style={{ fontSize: 11, color: "#9CA3AF", margin: 0 }}>{agent.desc}</p>}
+                    {!done && <p className="sw-agent-desc">{agent.desc}</p>}
                     {running && (
-                      <div style={{ height: 3, borderRadius: 99, background: "#F3F4F6", overflow: "hidden", marginTop: 6 }}>
-                        <div style={{ height: "100%", width: `${agent.progress}%`, background: agent.color, borderRadius: 99, transition: "width 0.2s" }} />
+                      <div className="sw-progress" role="progressbar" aria-label={`${agent.name} running`} aria-valuetext="In progress">
+                        <div className="sw-progress-bar" />
                       </div>
                     )}
                   </div>
@@ -256,101 +291,93 @@ export default function GitHubAgent({ onResults, selectedFrameworks, loading, se
         </div>
       )}
 
-      {error && (
-        <div style={{ padding: "14px 18px", borderRadius: 12, background: "#FEF2F2", border: "1px solid #FECACA", color: "#DC2626", fontSize: 13, marginBottom: 16 }}>
-          {error}
-        </div>
-      )}
+      {error && <div className="sw-error" role="alert">{error}</div>}
 
-      {/* Results */}
       {results && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", alignItems: "stretch" }}>
-          {/* LEFT COLUMN */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-            {/* Summary card */}
-            <div style={{ ...card, border: "1px solid #E5E7EB" }}>
-              <h3 style={{ fontSize: 17, fontWeight: 700, color: "#111827", margin: 0 }}>{results.repo}</h3>
-              <p style={{ fontSize: 12, color: "#9CA3AF", marginTop: 4, marginBottom: 10 }}>
-                {results.files_scanned} files scanned · {results.raw_findings?.length || 0} violations found
+        <div className="sw-results">
+          <div className="sw-stack">
+            <div className="sw-card">
+              <p className="sw-kicker">Scan summary</p>
+              <h3 className="sw-title" style={{ marginTop: 6 }}>{results.repo}</h3>
+              <p className="sw-meta">
+                {results.files_scanned} files scanned · {results.raw_findings?.length || 0} findings
               </p>
               <a
+                className="sw-btn sw-btn--ghost"
                 href={`https://github.com/${results.repo}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#6B7280", textDecoration: "none", padding: "5px 12px", borderRadius: 6, border: "1px solid #E5E7EB", marginBottom: 16 }}
+                style={{ width: "auto", display: "inline-flex", marginBottom: 14, textDecoration: "none" }}
               >
-                <ExternalLink size={11} /> View on GitHub
+                <ExternalLink size={12} /> View on GitHub
               </a>
 
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+              <div className="sw-chip-row">
                 {Object.entries(results.severity_counts || {})
                   .filter(([, count]) => count > 0)
                   .map(([sev, count]) => (
-                    <span key={sev} style={{ padding: "3px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: "#F9FAFB", color: "#374151", border: "1px solid #E5E7EB" }}>
+                    <span key={sev} className={`sw-chip ${SEV_CLASS[sev] || ""}`}>
                       {count} {sev}
                     </span>
-                  ))
-                }
+                  ))}
               </div>
 
               {results.triage_counts && (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 14 }}>
+                <div className="sw-triage">
                   {[
-                    { key: "IMMEDIATE_ACTION", label: "Immediate", color: "#374151" },
-                    { key: "HIGH_PRIORITY", label: "High", color: "#374151" },
-                    { key: "REVIEW_REQUIRED", label: "Review", color: "#374151" },
-                    { key: "MONITOR", label: "Monitor", color: "#9CA3AF" },
+                    { key: "IMMEDIATE_ACTION", label: "Immediate" },
+                    { key: "HIGH_PRIORITY", label: "High" },
+                    { key: "REVIEW_REQUIRED", label: "Review" },
+                    { key: "MONITOR", label: "Monitor" },
                   ].map(t => (
-                    <div key={t.key} style={{ textAlign: "center", padding: "10px 6px", borderRadius: 8, background: "#F9FAFB", border: "1px solid #F3F4F6" }}>
-                      <div style={{ fontSize: 20, fontWeight: 700, color: t.color }}>{results.triage_counts[t.key] || 0}</div>
-                      <div style={{ fontSize: 9, color: "#9CA3AF", fontWeight: 600, marginTop: 2, textTransform: "uppercase", letterSpacing: "0.04em" }}>{t.label}</div>
+                    <div key={t.key} className="sw-triage-cell">
+                      <strong>{results.triage_counts[t.key] || 0}</strong>
+                      <span>{t.label}</span>
                     </div>
                   ))}
                 </div>
               )}
 
               {results.policy_status && (
-                <div style={{ paddingTop: 12, borderTop: "1px solid #F3F4F6" }}>
+                <div style={{ paddingTop: 12, borderTop: "1px solid hsl(var(--col-border))" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 8 }}>
-                    <span style={{ color: "#6B7280", fontWeight: 500 }}>Security Docs</span>
-                    <span style={{ color: "#374151", fontWeight: 600 }}>{results.policy_status.score}%</span>
+                    <span className="sw-kicker" style={{ margin: 0 }}>Documentation coverage</span>
+                    <span style={{ color: "hsl(var(--col-text))", fontWeight: 650 }}>{results.policy_status.score}%</span>
                   </div>
-                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                  <div className="sw-progress" style={{ marginBottom: 10 }}>
+                    <div style={{ height: "100%", width: `${Math.min(100, results.policy_status.score || 0)}%`, background: "hsl(var(--col-primary))", borderRadius: 99 }} />
+                  </div>
+                  <div className="sw-chip-row" style={{ marginBottom: 0 }}>
                     {results.policy_status.present?.map(d => (
-                      <span key={d.path} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: "#F9FAFB", color: "#374151", border: "1px solid #E5E7EB" }}>✓ {d.name}</span>
+                      <span key={d.path} className="sw-chip">✓ {d.name}</span>
                     ))}
                     {results.policy_status.missing?.slice(0, 3).map(d => (
-                      <span key={d.path} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: "#F9FAFB", color: "#9CA3AF", border: "1px solid #F3F4F6" }}>✕ {d.name}</span>
+                      <span key={d.path} className="sw-chip" style={{ opacity: 0.7 }}>✕ {d.name}</span>
                     ))}
                   </div>
                 </div>
               )}
-
             </div>
 
-            {/* Audit questions */}
             {results.audit_questions_by_control && Object.keys(results.audit_questions_by_control).length > 0 && (
-              <div 
-                style={card}
-                onMouseOver={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 20px 40px rgba(0,0,0,0.08)"; e.currentTarget.style.borderColor = "#EEF2FF"; }}
-                onMouseOut={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = card.boxShadow; e.currentTarget.style.borderColor = "transparent"; }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.05em", textTransform: "uppercase", margin: 0 }}>What Your Auditor Will Ask</p>
-                  <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 100, background: "#F0FDF4", color: "#059669", fontWeight: 600 }}>
-                    {results.total_audit_questions} questions
-                  </span>
+              <div className="sw-card" ref={questionsWrapRef}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div>
+                    <p className="sw-kicker" style={{ marginBottom: 4 }}>Auditor readiness</p>
+                    <h3 className="sw-title" style={{ fontSize: "1rem" }}>Questions to prepare for</h3>
+                  </div>
+                  <span className="sw-chip">{results.total_audit_questions} questions</span>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14, maxHeight: showAllQuestions ? "none" : 280, overflow: "auto" }}>
                   {Object.entries(results.audit_questions_by_control)
                     .slice(0, showAllQuestions ? undefined : 2)
                     .map(([ctrl, qs]) => (
                     <div key={ctrl}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "#4F46E5", background: "#EEF2FF", padding: "2px 8px", borderRadius: 5 }}>{ctrl}</span>
-                      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 5 }}>
+                      <span className="sw-q-ctrl">{ctrl}</span>
+                      <div>
                         {(qs || []).slice(0, showAllQuestions ? undefined : 2).map((q, i) => (
-                          <div key={i} style={{ fontSize: 12, color: "#374151", display: "flex", gap: 8 }}>
-                            <span style={{ color: "#9CA3AF", flexShrink: 0 }}>Q{i + 1}.</span> {q}
+                          <div key={i} className="sw-q">
+                            <span>Q{i + 1}.</span> {q}
                           </div>
                         ))}
                       </div>
@@ -359,8 +386,10 @@ export default function GitHubAgent({ onResults, selectedFrameworks, loading, se
                 </div>
                 {Object.keys(results.audit_questions_by_control).length > 2 && (
                   <button
+                    type="button"
+                    className="sw-btn sw-btn--ghost"
+                    style={{ width: "100%", marginTop: 12 }}
                     onClick={() => setShowAllQuestions(s => !s)}
-                    style={{ marginTop: 12, padding: "8px 16px", borderRadius: 8, border: "1px solid #E5E7EB", background: "#FAFAF8", color: "#4F46E5", fontSize: 12, fontWeight: 600, cursor: "pointer", width: "100%", textAlign: "center" }}
                   >
                     {showAllQuestions ? "Show Less" : `Show All ${results.total_audit_questions} Questions`}
                   </button>
@@ -369,28 +398,22 @@ export default function GitHubAgent({ onResults, selectedFrameworks, loading, se
             )}
           </div>
 
-          {/* RIGHT COLUMN */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-            {/* Framework impact */}
+          <div className="sw-stack">
             {results.framework_metrics && (
-              <div 
-                style={card}
-                onMouseOver={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 20px 40px rgba(0,0,0,0.08)"; e.currentTarget.style.borderColor = "#EEF2FF"; }}
-                onMouseOut={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = card.boxShadow; e.currentTarget.style.borderColor = "transparent"; }}
-              >
-                <p style={{ fontSize: 12, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 14 }}>Cross-Framework Impact</p>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
+              <div className="sw-card">
+                <p className="sw-kicker" style={{ marginBottom: 12 }}>Cross-framework impact</p>
+                <div className="sw-fw-grid">
                   {[
-                    { key: "soc2", label: "SOC 2", color: "#4F46E5" },
-                    { key: "iso27001", label: "ISO 27001", color: "#059669" },
-                    { key: "hipaa", label: "HIPAA", color: "#D97706" },
-                    { key: "dpdp", label: "DPDP 2023", color: "#DB2777" },
+                    { key: "soc2", label: "SOC 2" },
+                    { key: "iso27001", label: "ISO 27001" },
+                    { key: "hipaa", label: "HIPAA" },
+                    { key: "dpdp", label: "DPDP Act" },
                   ].map(fw => (
-                    <div key={fw.key} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 12, background: fw.color + "08", border: `1.5px solid ${fw.color}25` }}>
-                      <span style={{ fontSize: 24, fontWeight: 700, color: fw.color }}>{results.framework_metrics[fw.key] || 0}</span>
+                    <div key={fw.key} className="sw-fw-card">
+                      <strong>{results.framework_metrics[fw.key] || 0}</strong>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{fw.label}</div>
-                        <div style={{ fontSize: 11, color: "#9CA3AF" }}>violations</div>
+                        <span>{fw.label}</span>
+                        <small>mapped findings</small>
                       </div>
                     </div>
                   ))}
@@ -398,126 +421,169 @@ export default function GitHubAgent({ onResults, selectedFrameworks, loading, se
               </div>
             )}
 
-            {/* Findings by file */}
             <div>
-              <p style={{ fontSize: 13.5, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 12 }}>Violations by File</p>
+              <p className="sw-kicker" style={{ marginBottom: 10 }}>Violations by file</p>
               {Object.keys(byFile).length === 0 ? (
-                <div style={{ ...card, textAlign: "center", padding: 36 }}>
-                  <Check size={32} color="#059669" style={{ margin: "0 auto 10px" }} />
-                  <p style={{ fontWeight: 600, fontSize: 15.5, color: "#111827" }}>No violations found</p>
-                  <p style={{ fontSize: 14.5, color: "#9CA3AF", marginTop: 4 }}>All patterns passed</p>
+                <div className="sw-card sw-empty">
+                  <Check size={28} color="hsl(152 50% 45%)" style={{ margin: "0 auto" }} />
+                  <p style={{ fontWeight: 650, color: "hsl(var(--col-text))", marginTop: 8 }}>No findings detected</p>
+                  <p>No findings detected for the selected assessment.</p>
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {Object.entries(byFile).map(([file, ffindings]) => {
-                    const isOpen = expanded[file];
-                    const worst = ffindings.reduce((w, f) => {
-                      const o = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
-                      return (o[f.severity] || 0) > (o[w] || 0) ? f.severity : w;
-                    }, "LOW");
-                    const hasCVE = ffindings.some(f => f.source === "osv");
+                Object.entries(byFile).map(([file, ffindings]) => {
+                  const isOpen = expanded[file];
+                  const worst = ffindings.reduce((w, f) => {
+                    const o = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+                    return (o[f.severity] || 0) > (o[w] || 0) ? f.severity : w;
+                  }, "LOW");
+                  const hasCVE = ffindings.some(f => f.source === "osv");
 
-                    return (
-                      <div key={file} style={{ borderRadius: 14, overflow: "hidden", border: "1.5px solid #F3F4F6", background: "#FFFFFF", transition: "all 0.2s" }}>
-                        <button
-                          style={{ width: "100%", padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
-                          onClick={() => setExpanded(p => ({ ...p, [file]: !isOpen }))}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
-                            {hasCVE ? <Package size={13} color="#9CA3AF" style={{ flexShrink: 0 }} /> : <Code size={13} color="#9CA3AF" style={{ flexShrink: 0 }} />}
-                            <span style={{ fontSize: 13.5, fontFamily: "monospace", color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file}</span>
+                  return (
+                    <div key={file} className="sw-file">
+                      <button
+                        type="button"
+                        className="sw-file-btn"
+                        aria-expanded={!!isOpen}
+                        onClick={() => setExpanded(p => ({ ...p, [file]: !isOpen }))}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+                          {hasCVE ? <Package size={13} color="hsl(var(--col-muted))" /> : <Code size={13} color="hsl(var(--col-muted))" />}
+                          <span className="sw-file-path">{file}</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                          <span className={`sw-chip ${SEV_CLASS[worst] || ""}`}>
+                            {ffindings.length} {ffindings.length === 1 ? "finding" : "findings"}
+                          </span>
+                          {isOpen ? <ChevronDown size={14} color="hsl(var(--col-muted))" /> : <ChevronRight size={14} color="hsl(var(--col-muted))" />}
+                        </div>
+                      </button>
+
+                      {isOpen && ffindings.map((finding, idx) => {
+                        const vc = VERDICT[finding.audit_verdict] || VERDICT.CONFIRMED;
+                        const fKey = `${file}:${idx}`;
+                        const fr = fixResults[fKey];
+                        const isFixing = fixingKey === fKey;
+                        return (
+                          <div key={`${file}-${idx}-${finding.pattern_id || finding.name || idx}`} className="sw-finding">
+                            <div className="sw-finding-head">
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flexWrap: "wrap" }}>
+                                <SevBadge sev={finding.severity} />
+                                <span className="sw-finding-name">{finding.name}</span>
+                              </div>
+                              <span className={`sw-verdict sw-chip ${vc.className}`}>{vc.label}</span>
+                            </div>
+
+                            {finding.line > 0 && (
+                              <div className="sw-code">Line {finding.line}: {finding.line_content}</div>
+                            )}
+
+                            <p className="sw-finding-msg">{finding.message}</p>
+
+                            {finding.auditor_challenge && (
+                              <p className="sw-finding-auditor">Auditor: &quot;{finding.auditor_challenge}&quot;</p>
+                            )}
+
+                            {finding.fix && (
+                              <p className="sw-finding-fix">Recommended: {finding.fix}</p>
+                            )}
+
+                            {fr?.pr_url ? (
+                              <div style={{ marginTop: 8, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6 }}>
+                                <a className="sw-btn sw-btn--success" href={fr.pr_url} target="_blank" rel="noopener noreferrer">
+                                  <GitPullRequest size={12} /> Review PR #{fr.pr_number} on GitHub
+                                </a>
+                                <span style={{ fontSize: 11.5, color: "hsl(var(--col-muted))" }}>
+                                  Branch <code style={{ fontSize: 11 }}>{fr.branch}</code> — approve &amp; merge manually
+                                </span>
+                              </div>
+                            ) : (
+                              <div style={{ marginTop: 8 }}>
+                                <button
+                                  type="button"
+                                  className="sw-btn sw-btn--outline"
+                                  onClick={() => handleAutoFix(file, finding, idx)}
+                                  disabled={isFixing || !!fixingKey}
+                                >
+                                  {isFixing
+                                    ? <><Loader size={11} className="sw-spin" /> Creating PR...</>
+                                    : <><Wrench size={11} /> Auto-Fix</>}
+                                </button>
+                                {fr?.error && (
+                                  <p style={{ marginTop: 6, fontSize: 12, color: "hsl(0 70% 65%)", maxWidth: 420 }}>{fr.error}</p>
+                                )}
+                              </div>
+                            )}
+
+                            <div className="sw-controls">
+                              {finding.controls?.map(c => (
+                                <span key={c} className="sw-control">{c}</span>
+                              ))}
+                            </div>
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: 8 }}>
-                            <span style={{ fontSize: 12.5, fontWeight: 600, padding: "3px 8px", borderRadius: 100, background: (SEV[worst] || SEV.LOW).bg, color: (SEV[worst] || SEV.LOW).color }}>
-                              {ffindings.length} {ffindings.length === 1 ? "issue" : "issues"}
-                            </span>
-                            {isOpen ? <ChevronDown size={14} color="#9CA3AF" /> : <ChevronRight size={14} color="#9CA3AF" />}
-                          </div>
-                        </button>
-
-                        {isOpen && (
-                          <div style={{ borderTop: "1px solid #F3F4F6" }}>
-                            {ffindings.map((finding, idx) => {
-                              const vc = VERDICT[finding.audit_verdict] || VERDICT.CONFIRMED;
-                              return (
-                                <div key={idx} style={{ padding: "16px 18px", borderBottom: idx < ffindings.length - 1 ? "1px solid #F9FAFB" : "none", background: "#FAFAF8" }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 8 }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                                      <SevBadge sev={finding.severity} />
-                                      <span style={{ fontSize: 14.5, fontWeight: 600, color: "#111827" }}>{finding.name}</span>
-                                    </div>
-                                    <span style={{ fontSize: 12.5, padding: "3px 8px", borderRadius: 100, background: vc.bg, color: vc.color, whiteSpace: "nowrap", fontWeight: 500 }}>
-                                      {vc.label}
-                                    </span>
-                                  </div>
-
-                                  {finding.line > 0 && (
-                                    <div style={{ fontFamily: "monospace", fontSize: 12.5, padding: "6px 10px", borderRadius: 7, background: "#F3F4F6", color: "#374151", marginBottom: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                      Line {finding.line}: {finding.line_content}
-                                    </div>
-                                  )}
-
-                                  <p style={{ fontSize: 13.5, color: "#6B7280", marginBottom: 6 }}>{finding.message}</p>
-
-                                  {finding.auditor_challenge && (
-                                    <p style={{ fontSize: 13.5, color: "#D97706", fontStyle: "italic", marginBottom: 6 }}>
-                                      Auditor: "{finding.auditor_challenge}"
-                                    </p>
-                                  )}
-
-                                  {finding.fix && (
-                                    <p style={{ fontSize: 12.5, color: "#059669", background: "#F0FDF4", padding: "6px 10px", borderRadius: 7 }}>
-                                      Fix: {finding.fix}
-                                    </p>
-                                  )}
-
-                                  {/* Auto-Fix PR Button */}
-                                  {(() => {
-                                    const fKey = `${file}:${idx}`;
-                                    const fr = fixResults[fKey];
-                                    const isFixing = fixingKey === fKey;
-                                    if (fr?.pr_url) {
-                                      return (
-                                        <a
-                                          href={fr.pr_url}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 8, padding: "6px 14px", borderRadius: 8, background: "#F0FDF4", border: "1px solid #BBF7D0", color: "#059669", fontSize: 12.5, fontWeight: 600, textDecoration: "none" }}
-                                        >
-                                          <GitPullRequest size={12} /> PR #{fr.pr_number} opened
-                                        </a>
-                                      );
-                                    }
-                                    return (
-                                      <div style={{ marginTop: 8 }}>
-                                        <button
-                                          onClick={() => handleAutoFix(file, finding, idx)}
-                                          disabled={isFixing || !!fixingKey}
-                                          style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 8, background: isFixing ? "#F3F4F6" : "#059669", color: isFixing ? "#6B7280" : "#FFFFFF", fontSize: 12.5, fontWeight: 600, border: "none", cursor: isFixing || fixingKey ? "not-allowed" : "pointer", opacity: fixingKey && !isFixing ? 0.5 : 1 }}
-                                        >
-                                          {isFixing ? <Loader size={11} style={{ animation: "spin 1s linear infinite" }} /> : <><Wrench size={11} /> Auto-Fix</>}
-                                        </button>
-                                      </div>
-                                    );
-                                  })()}
-                                  <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
-                                    {finding.controls?.map(c => (
-                                      <span key={c} style={{ fontSize: 11.5, padding: "2px 7px", borderRadius: 5, background: "#EEF2FF", color: "#4F46E5", fontWeight: 600 }}>{c}</span>
-                                    ))}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
         </div>
+      )}
+
+      {tokenModal && createPortal(
+        <div className="sw-modal-backdrop" onClick={() => setTokenModal(null)} role="presentation">
+          <div
+            className="sw-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sw-token-title"
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <GitPullRequest size={18} color="hsl(var(--col-primary))" />
+              <h3 id="sw-token-title">GitHub token required</h3>
+            </div>
+            <p>
+              Auto-Fix creates a pull request on <strong>{repoUrl.replace("https://github.com/", "") || "your repo"}</strong>.
+              Paste a Personal Access Token with <code style={{ fontSize: 12 }}>repo</code> scope — you review and merge on GitHub.
+            </p>
+            <a
+              className="sw-link"
+              href="https://github.com/settings/tokens/new?scopes=repo&description=Pramanik%20Auto-Fix"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, marginBottom: 12 }}
+            >
+              <ExternalLink size={12} /> Create a token on GitHub
+            </a>
+            <label className="sw-label" htmlFor="sw-modal-token">Personal access token</label>
+            <input
+              id="sw-modal-token"
+              autoFocus
+              type="password"
+              className="sw-input sw-input--mono"
+              placeholder="ghp_... or github_pat_..."
+              value={modalToken}
+              onChange={e => setModalToken(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && confirmTokenAndFix()}
+              autoComplete="off"
+            />
+            <div className="sw-modal-actions">
+              <button type="button" className="sw-btn sw-btn--ghost" onClick={() => setTokenModal(null)}>Cancel</button>
+              <button
+                type="button"
+                className="sw-btn sw-btn--primary"
+                style={{ width: "auto", padding: "0.6rem 1rem" }}
+                onClick={confirmTokenAndFix}
+                disabled={!modalToken.trim()}
+              >
+                Create pull request
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

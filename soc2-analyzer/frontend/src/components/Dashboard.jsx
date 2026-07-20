@@ -113,7 +113,7 @@ export default function Dashboard({ data, config, onReset, user, onLogout }) {
                 {activeTab === "topology" && `Cloud Topology Map`}
               </h1>
               <p className="text-[13px] text-[hsl(var(--col-muted))] mt-1 font-normal">
-                {activeTab === "overview" && `Autonomous Trust Audit — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                {activeTab === "overview" && `Compliance review — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
                 {activeTab === "audits" && `Cross-framework compliance scoring and methodology`}
                 {activeTab === "topology" && `Visualizing data flow from AWS Config to Compliance Artifacts`}
               </p>

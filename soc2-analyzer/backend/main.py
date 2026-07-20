@@ -1,5 +1,8 @@
 import os
 import json
+import urllib.request
+import urllib.parse
+import urllib.error
 from typing import Optional, List
 from dotenv import load_dotenv
 
@@ -51,6 +54,67 @@ async def health():
         "ai_model": ai_service.model,
         "version": "2.0.0",
         "features": ["langgraph", "auto-fix-pr", "adversary-agent", "ces-engine"],
+    }
+
+
+class GoogleAuthRequest(BaseModel):
+    code: str
+
+
+@app.post("/api/auth/google")
+async def auth_google(req: GoogleAuthRequest):
+    """Exchange a Google OAuth auth code for user profile info."""
+    client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+    client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
+    if not client_id or not client_secret:
+        raise HTTPException(status_code=500, detail="Google OAuth is not configured on the server")
+
+    token_body = urllib.parse.urlencode({
+        "code": req.code,
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "redirect_uri": "postmessage",
+        "grant_type": "authorization_code",
+    }).encode()
+
+    try:
+        token_req = urllib.request.Request(
+            "https://oauth2.googleapis.com/token",
+            data=token_body,
+            method="POST",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        with urllib.request.urlopen(token_req, timeout=15) as resp:
+            tokens = json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode() if e.fp else str(e)
+        raise HTTPException(status_code=401, detail=f"Google token exchange failed: {detail}")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Google token exchange failed: {e}")
+
+    access_token = tokens.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Google did not return an access token")
+
+    try:
+        user_req = urllib.request.Request(
+            "https://www.googleapis.com/oauth2/v3/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        with urllib.request.urlopen(user_req, timeout=15) as resp:
+            profile = json.loads(resp.read().decode())
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Failed to fetch Google profile: {e}")
+
+    email = profile.get("email")
+    if not email:
+        raise HTTPException(status_code=401, detail="Google account did not provide an email")
+
+    return {
+        "email": email,
+        "name": profile.get("name") or email.split("@")[0],
+        "picture": profile.get("picture"),
+        "sub": profile.get("sub"),
     }
 
 
@@ -398,14 +462,22 @@ async def pramanik_chat(
     files: List[UploadFile] = File(default=[]),
 ):
     try:
+        if not (message or "").strip() and not files:
+            raise HTTPException(status_code=400, detail="Message is required")
+
         result = deepseek_service.chat_with_rag(message)
+        # Older soft-error shape from deepseek_service — still fall back if present
+        if isinstance(result, dict) and result.get("error") and "temporarily unavailable" in (result.get("response") or ""):
+            raise Exception(result.get("error") or "Deepseek unavailable")
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Deepseek chat failed: {e}")
         # Fallback to AI provider for chat
         try:
             response_text = ai_service.call_llm(
-                prompt=message,
+                prompt=message or "Hello",
                 system="You are a SOC 2 compliance expert. Answer questions about compliance frameworks, security controls, and audit preparation.",
                 temperature=0.3,
                 max_tokens=1000,
