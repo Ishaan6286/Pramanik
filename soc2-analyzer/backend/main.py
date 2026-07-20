@@ -36,13 +36,31 @@ app = FastAPI(title="ComplianceAI API")
 
 # CORS — restricted in production via env var, open in dev
 _cors_env = os.getenv("CORS_ORIGINS", "")
-_cors_origins = _cors_env.split(",") if _cors_env else ["*"]
+if _cors_env:
+    _cors_origins = [origin.strip() for origin in _cors_env.split(",") if origin.strip()]
+else:
+    _cors_origins = [
+        "http://localhost:5173",
+        "https://pramanik-ai-delta.vercel.app",
+        "http://127.0.0.1:5173"
+    ]
+
+# Do not use wildcard CORS with credentials
+_allow_creds = "*" not in _cors_origins
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
+    allow_credentials=_allow_creds,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/health")
+async def minimal_health():
+    """Minimal health check — returns simple healthy status."""
+    return {"status": "ok"}
 
 
 @app.get("/api/health")
