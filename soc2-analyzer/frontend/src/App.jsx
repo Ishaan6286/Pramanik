@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { ThemeProvider } from "./ThemeContext";
 import LandingPage from "./components/LandingPage";
@@ -20,33 +20,82 @@ if (!GOOGLE_CLIENT_ID) {
 }
 console.log("[Pramanik] Google client_id present:", !!GOOGLE_CLIENT_ID, "| trimmed length:", GOOGLE_CLIENT_ID.length);
 
+export const AuthContext = createContext(null);
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
+function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("pramanik_user");
+    const storedProfile = localStorage.getItem("pramanik_profile");
+    if (storedUser) {
+      setUser(storedUser);
+      if (storedProfile) {
+        try {
+          setProfile(JSON.parse(storedProfile));
+        } catch (e) {
+          console.warn("Corrupted profile data, clearing.");
+          localStorage.removeItem("pramanik_profile");
+        }
+      }
+    }
+    setIsAuthLoading(false);
+  }, []);
+
+  const login = (email, profileData) => {
+    setUser(email);
+    setProfile(profileData);
+    localStorage.setItem("pramanik_user", email);
+    if (profileData) {
+      localStorage.setItem("pramanik_profile", JSON.stringify(profileData));
+    }
+  };
+
+  const logout = () => {
+    setUser(null);
+    setProfile(null);
+    localStorage.removeItem("pramanik_user");
+    localStorage.removeItem("pramanik_profile");
+  };
+
+  const isAuthenticated = !!user;
+
+  return (
+    <AuthContext.Provider value={{ user, profile, isAuthenticated, isAuthLoading, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
 function AppContent() {
-  const [user, setUser] = useState(() => localStorage.getItem("pramanik_user"));
+  const { user, isAuthenticated, isAuthLoading, login, logout } = useAuth();
+  
   const [page, setPage] = useState(() => {
     if (window.location.pathname === "/auth/github/callback") {
       return "login";
     }
     return localStorage.getItem("pramanik_user") ? "upload" : "landing";
   });
+  
   const [analysisData, setAnalysisData] = useState(null);
   const [uploadedConfig, setUploadedConfig] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = (email, profile) => {
-    setUser(email);
-    localStorage.setItem("pramanik_user", email);
-    if (profile) {
-      localStorage.setItem("pramanik_profile", JSON.stringify(profile));
-    }
+    login(email, profile);
     setPage("upload");
   };
 
   const handleLogout = () => {
-    setUser(null);
+    logout();
     setAnalysisData(null);
     setUploadedConfig(null);
-    localStorage.removeItem("pramanik_user");
-    localStorage.removeItem("pramanik_profile");
     setPage("landing");
   };
 
@@ -56,18 +105,28 @@ function AppContent() {
     setPage("dashboard");
   };
 
+  if (isAuthLoading) {
+    return <div className="min-h-screen bg-[hsl(var(--col-bg))] flex items-center justify-center"></div>;
+  }
+
   switch (page) {
     case "landing":
       return (
         <>
-          <LandingPage onGetStarted={() => setPage("login")} onChat={() => setPage("chat")} />
+          <LandingPage 
+            onGetStarted={() => isAuthenticated ? setPage("upload") : setPage("login")} 
+            onChat={() => setPage("chat")} 
+            isAuthenticated={isAuthenticated}
+            user={user}
+            onLogout={handleLogout}
+          />
           <ChatLauncher />
         </>
       );
     case "login":
       return (
         <>
-          <LoginPage onLogin={handleLogin} onBack={() => setPage("landing")} />
+          <LoginPage onLogin={handleLogin} onBack={() => setPage(isAuthenticated ? "upload" : "landing")} />
           <ChatLauncher />
         </>
       );
@@ -110,7 +169,13 @@ function AppContent() {
     default:
       return (
         <>
-          <LandingPage onGetStarted={() => setPage("login")} onChat={() => setPage("chat")} />
+          <LandingPage 
+            onGetStarted={() => isAuthenticated ? setPage("upload") : setPage("login")} 
+            onChat={() => setPage("chat")} 
+            isAuthenticated={isAuthenticated}
+            user={user}
+            onLogout={handleLogout}
+          />
           <ChatLauncher />
         </>
       );
@@ -121,7 +186,9 @@ export default function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <ThemeProvider>
-        <AppContent />
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
       </ThemeProvider>
     </GoogleOAuthProvider>
   );

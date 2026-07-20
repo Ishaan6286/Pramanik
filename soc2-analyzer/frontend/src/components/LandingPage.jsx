@@ -105,7 +105,7 @@ function scrollToId(id) {
   if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-export default function LandingPage({ onGetStarted }) {
+export default function LandingPage({ onGetStarted, isAuthenticated, user, onLogout }) {
   const reduceMotion = useReducedMotion();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -169,12 +169,25 @@ export default function LandingPage({ onGetStarted }) {
 
             <div className="lp-nav-actions">
               <ThemeToggle />
-              <button type="button" className="lp-btn lp-btn--ghost lp-btn--sm" onClick={onGetStarted}>
-                Login
-              </button>
-              <button type="button" className="lp-btn lp-btn--solid lp-btn--sm" onClick={onGetStarted}>
-                Get Started
-              </button>
+              {isAuthenticated ? (
+                <>
+                  <button type="button" className="lp-btn lp-btn--ghost lp-btn--sm" onClick={onLogout}>
+                    Logout
+                  </button>
+                  <button type="button" className="lp-btn lp-btn--solid lp-btn--sm" onClick={onGetStarted}>
+                    Open Scanner
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="lp-btn lp-btn--ghost lp-btn--sm" onClick={onGetStarted}>
+                    Login
+                  </button>
+                  <button type="button" className="lp-btn lp-btn--solid lp-btn--sm" onClick={onGetStarted}>
+                    Get Started
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 className="lp-menu-btn"
@@ -209,9 +222,20 @@ export default function LandingPage({ onGetStarted }) {
               <button type="button" className="lp-drawer-link" onClick={() => navGo("how-it-works")}>How It Works</button>
               <button type="button" className="lp-drawer-link" onClick={() => navGo("frameworks")}>Frameworks</button>
               <button type="button" className="lp-drawer-link" onClick={() => navGo("about")}>About</button>
-              <button type="button" className="lp-btn lp-btn--solid" style={{ marginTop: "1rem" }} onClick={() => { setMenuOpen(false); onGetStarted(); }}>
-                Get Started
-              </button>
+              {isAuthenticated ? (
+                <>
+                  <button type="button" className="lp-btn lp-btn--ghost" style={{ marginTop: "1rem" }} onClick={() => { setMenuOpen(false); onLogout(); }}>
+                    Logout
+                  </button>
+                  <button type="button" className="lp-btn lp-btn--solid" style={{ marginTop: "1rem" }} onClick={() => { setMenuOpen(false); onGetStarted(); }}>
+                    Open Scanner
+                  </button>
+                </>
+              ) : (
+                <button type="button" className="lp-btn lp-btn--solid" style={{ marginTop: "1rem" }} onClick={() => { setMenuOpen(false); onGetStarted(); }}>
+                  Get Started
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -230,7 +254,7 @@ export default function LandingPage({ onGetStarted }) {
             </motion.p>
             <motion.div className="lp-hero-ctas" {...fade(0.15)}>
               <button type="button" className="lp-btn lp-btn--solid" onClick={onGetStarted}>
-                Explore Pramanik <ArrowRight size={16} aria-hidden="true" />
+                {isAuthenticated ? "Open Scanner" : "Explore Pramanik"} <ArrowRight size={16} aria-hidden="true" />
               </button>
               <button type="button" className="lp-btn lp-btn--ghost" onClick={() => scrollToId("frameworks")}>
                 View Frameworks
@@ -426,7 +450,7 @@ export default function LandingPage({ onGetStarted }) {
             </div>
             <div className="lp-cta-actions">
               <button type="button" className="lp-btn lp-btn--solid" onClick={onGetStarted}>
-                Get Started
+                {isAuthenticated ? "Open Scanner" : "Get Started"}
               </button>
               <button type="button" className="lp-btn lp-btn--ghost" onClick={() => scrollToId("frameworks")}>
                 Explore Frameworks
