@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGoogleLogin } from "@react-oauth/google";
 import { Shield, ArrowRight, Lock, Eye, EyeOff, ChevronLeft } from "lucide-react";
@@ -57,8 +57,76 @@ export default function LoginPage({ onLogin, onBack }) {
   });
 
   const handleGitHubClick = () => {
-    setOauthError("GitHub login will be available soon");
+    setLoading(true);
+    setOauthError(null);
+    try {
+      const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
+      if (!clientId) {
+        throw new Error("GitHub client ID is not configured in Vercel settings.");
+      }
+      
+      // CSRF token generation
+      const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem("pramanik_github_state", state);
+      
+      const redirectUri = encodeURIComponent(`${window.location.origin}/auth/github/callback`);
+      const githubUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=read:user%20user:email&state=${state}`;
+      
+      window.location.href = githubUrl;
+    } catch (err) {
+      setOauthError(err.message || "Failed to initiate GitHub login");
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    const checkGitHubCallback = async () => {
+      const path = window.location.pathname;
+      if (path !== "/auth/github/callback") return;
+
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+      const state = params.get("state");
+      const storedState = localStorage.getItem("pramanik_github_state");
+
+      // Instantly clear callback parameters from URL
+      window.history.replaceState({}, document.title, window.location.origin + "/login");
+
+      if (!code) {
+        const errorMsg = params.get("error_description") || params.get("error") || "GitHub authentication failed";
+        setOauthError(errorMsg);
+        return;
+      }
+
+      if (!state || state !== storedState) {
+        setOauthError("CSRF state mismatch. Authentication aborted for security.");
+        localStorage.removeItem("pramanik_github_state");
+        return;
+      }
+
+      localStorage.removeItem("pramanik_github_state");
+      setLoading(true);
+      setOauthError(null);
+
+      try {
+        const res = await fetch(`${API_URL}/api/auth/github`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(typeof data.detail === "string" ? data.detail : "GitHub sign-in failed");
+        }
+        onLogin(data.email, data);
+      } catch (err) {
+        setOauthError(err.message || "GitHub sign-in failed");
+        setLoading(false);
+      }
+    };
+
+    checkGitHubCallback();
+  }, [onLogin]);
 
   return (
     <div className="min-h-screen relative flex items-center justify-center bg-[hsl(var(--col-bg))] text-[hsl(var(--col-text))] overflow-hidden p-6">

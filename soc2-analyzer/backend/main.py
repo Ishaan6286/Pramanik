@@ -136,6 +136,101 @@ async def auth_google(req: GoogleAuthRequest):
     }
 
 
+class GitHubAuthRequest(BaseModel):
+    code: str
+
+
+@app.post("/api/auth/github")
+async def auth_github(req: GitHubAuthRequest):
+    """Exchange a GitHub OAuth auth code for user profile info."""
+    client_id = os.getenv("GITHUB_CLIENT_ID", "").strip()
+    client_secret = os.getenv("GITHUB_CLIENT_SECRET", "").strip()
+    if not client_id or not client_secret:
+        raise HTTPException(status_code=500, detail="GitHub OAuth is not configured on the server")
+
+    token_body = urllib.parse.urlencode({
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "code": req.code,
+    }).encode()
+
+    try:
+        token_req = urllib.request.Request(
+            "https://github.com/login/oauth/access_token",
+            data=token_body,
+            method="POST",
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+                "User-Agent": "Pramanik-Compliance-AI"
+            },
+        )
+        with urllib.request.urlopen(token_req, timeout=15) as resp:
+            tokens = json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode() if e.fp else str(e)
+        raise HTTPException(status_code=401, detail=f"GitHub token exchange failed: {detail}")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"GitHub token exchange failed: {e}")
+
+    access_token = tokens.get("access_token")
+    if not access_token:
+        error_desc = tokens.get("error_description") or tokens.get("error") or "GitHub did not return an access token"
+        raise HTTPException(status_code=401, detail=error_desc)
+
+    try:
+        user_req = urllib.request.Request(
+            "https://api.github.com/user",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "User-Agent": "Pramanik-Compliance-AI"
+            },
+        )
+        with urllib.request.urlopen(user_req, timeout=15) as resp:
+            profile = json.loads(resp.read().decode())
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Failed to fetch GitHub profile: {e}")
+
+    email = profile.get("email")
+    if not email:
+        try:
+            emails_req = urllib.request.Request(
+                "https://api.github.com/user/emails",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "User-Agent": "Pramanik-Compliance-AI"
+                },
+            )
+            with urllib.request.urlopen(emails_req, timeout=15) as resp:
+                emails_list = json.loads(resp.read().decode())
+                primary_email = None
+                for email_info in emails_list:
+                    if email_info.get("primary") and email_info.get("verified"):
+                        primary_email = email_info.get("email")
+                        break
+                if not primary_email:
+                    for email_info in emails_list:
+                        if email_info.get("primary"):
+                            primary_email = email_info.get("email")
+                            break
+                if not primary_email and emails_list:
+                    primary_email = emails_list[0].get("email")
+                
+                email = primary_email
+        except Exception as e:
+            print(f"Failed to fetch GitHub emails: {e}")
+
+    if not email:
+        raise HTTPException(status_code=401, detail="GitHub account did not provide a primary email address")
+
+    return {
+        "email": email,
+        "name": profile.get("name") or profile.get("login") or email.split("@")[0],
+        "picture": profile.get("avatar_url"),
+        "sub": str(profile.get("id")),
+    }
+
+
 @app.post("/api/analyze")
 async def analyze(config: UploadFile = File(...)):
     try:

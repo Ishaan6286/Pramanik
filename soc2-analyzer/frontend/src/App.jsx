@@ -13,7 +13,12 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 function AppContent() {
   const [user, setUser] = useState(() => localStorage.getItem("pramanik_user"));
-  const [page, setPage] = useState(() => (localStorage.getItem("pramanik_user") ? "upload" : "landing"));
+  const [page, setPage] = useState(() => {
+    if (window.location.pathname === "/auth/github/callback") {
+      return "login";
+    }
+    return localStorage.getItem("pramanik_user") ? "upload" : "landing";
+  });
   const [analysisData, setAnalysisData] = useState(null);
   const [uploadedConfig, setUploadedConfig] = useState(null);
   const [loading, setLoading] = useState(false);
