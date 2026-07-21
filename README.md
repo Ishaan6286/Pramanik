@@ -1,4 +1,4 @@
-# Pramanik AI â€” SOC 2 Compliance Co-Pilot
+# Pramanik AI : SOC 2 Compliance Co-Pilot
 
 > An AI-powered SOC 2 compliance analyzer for SaaS startups. Upload your AWS configuration, scan live infrastructure or GitHub repositories, and get instant gap analysis, AI-generated remediation steps, policy documents, and adversarial audit simulations â€” in minutes, not months.
 
