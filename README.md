@@ -1,703 +1,421 @@
-# Pramanik AI — SOC 2 Compliance RAG Assistant
+# Pramanik AI â€” SOC 2 Compliance Co-Pilot
 
-A comprehensive Retrieval-Augmented Generation (RAG) system that powers AI-driven SOC 2 compliance assistance for SaaS startups. Pramanik AI provides 7 specialized operating modes to guide users through compliance gap analysis, policy generation, adversarial auditing, vendor inheritance mapping, and more.
+> An AI-powered SOC 2 compliance analyzer for SaaS startups. Upload your AWS configuration, scan live infrastructure or GitHub repositories, and get instant gap analysis, AI-generated remediation steps, policy documents, and adversarial audit simulations â€” in minutes, not months.
 
-## 🎯 System Overview
-
-**Pramanik AI** is a multi-modal RAG engine that combines:
-- **Large Language Models** (Deepseek via NVIDIA API, AWS Bedrock, Groq fallback)
-- **SOC 2 Control Knowledge Base** (35+ granular controls with category mappings)
-- **Compliance Risk Vectorization** (CES Algorithm for prioritizing remediation)
-- **Database persistence** (Supabase for scan history and evidence tracking)
-- **Frontend Integration** (React component with real-time chat and mode switching)
+[![GitHub repo](https://img.shields.io/badge/GitHub-Ishaan6286%2FPramanik-blue?logo=github)](https://github.com/Ishaan6286/Pramanik)
+[![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Frontend](https://img.shields.io/badge/Frontend-React%2018%20%2B%20Vite-61dafb?logo=react)](https://react.dev/)
+[![Database](https://img.shields.io/badge/Database-Supabase-3ecf8e?logo=supabase)](https://supabase.com/)
+[![AI](https://img.shields.io/badge/AI-Groq%20%7C%20DeepSeek%20%7C%20Bedrock-ff6b35)](https://groq.com/)
 
 ---
 
-## 📋 The 7 Operating Modes
+## Overview
 
-### Mode 1: 🔍 **Gap Analysis**
-Scans your AWS configuration against SOC 2 controls and identifies compliance gaps.
+SOC 2 Type II compliance is notoriously slow, expensive, and confusing for startups. Security audits require mapping dense AWS configurations to abstract compliance criteria â€” a process that traditionally takes **months of manual work** and expensive consultants.
 
-**Input:** AWS config JSON or checkbox survey
-**Output:** 
-- Compliance score (0-100%)
-- List of failed controls with severity (Critical/High/Medium)
-- Remediation steps for each failed control
-- Industry benchmark comparison
+**Pramanik AI** automates this. A CTO or DevOps engineer connects their AWS account or GitHub repository. A deterministic Python engine evaluates the infrastructure against all **33 SOC 2 Trust Services Criteria**. Failed controls are sent to LLMs that generate plain-English risk explanations and step-by-step AWS console fixes. The system also generates complete compliance policy documents, simulates adversarial auditor interviews, maps vendor coverage, and produces a personalised certification roadmap.
 
-**API Endpoint:** `POST /api/pramanik/gap-analysis`
-
-**Example Request:**
-```json
-{
-  "mfa_enforced": true,
-  "cloudtrail_enabled": false,
-  "s3_public_access": true,
-  "public_s3_buckets": ["my-uploads-bucket"],
-  "rds_encryption": true,
-  "tls_enabled": true,
-  "security_groups_configured": true,
-  "least_privilege_applied": false,
-  "cloudwatch_enabled": false
-}
-```
-
-**Example Response:**
-```json
-{
-  "score": 45,
-  "passed": 5,
-  "total": 9,
-  "criticial_issues": [
-    {
-      "control_id": "CC7.2",
-      "title": "Monitoring for anomalies (CloudTrail)",
-      "status": "FAILED",
-      "risk_explanation": "Without CloudTrail, you have no audit trail of API calls...",
-      "fix_steps": ["Enable CloudTrail", "Store logs in S3 with versioning", "Set up CloudWatch alerts"],
-      "business_impact": "Audit failure — cannot prove compliance to customers"
-    }
-  ]
-}
-```
+**Target audience:** CTOs, CISOs, DevOps engineers, and compliance officers at SaaS startups (Seed through Series C) preparing for SOC 2 Type II certification.
 
 ---
 
-### Mode 2: 📄 **Policy Generator**
-Generates professional, SOC 2-compliant policy documents tailored to your company and tech stack.
+## Key Features
 
-**Supported Policy Types:**
-- Access Control Policy
-- Incident Response Policy
-- Data Encryption Policy
-- Password and Authentication Policy
-- Vendor Management Policy
-- Change Management Policy
-- Business Continuity Policy
-- Asset Management Policy
-- Risk Assessment Policy
-- Security Awareness Training Policy
+### Core Analysis
+- **AWS Gap Analysis** â€” Deterministic evaluation of AWS configs against all 33 SOC 2 controls; outputs a compliance score, severity-ranked failures (Critical / High / Medium), and step-by-step AWS console remediation steps
+- **Live AWS Scanning** â€” Connects directly to AWS via `boto3` to pull live infrastructure state
+- **GitHub Repository Scanning** â€” LangGraph multi-agent pipeline scans repos for hardcoded secrets, missing security docs, and vulnerable dependencies (CVE checks via OSV.dev)
+- **Compliance Drift Detection** â€” Compares current configs against stored baselines to surface regressions
 
-**API Endpoint:** `POST /api/pramanik/policy`
+### AI Modes (Pramanik AI Co-Pilot)
 
-**Example Request:**
-```json
-{
-  "policyType": "Incident Response Policy",
-  "companyName": "PayFlow Fintech",
-  "stackTech": "AWS, Stripe, Supabase, GitHub",
-  "policyOwner": "Chief Security Officer"
-}
-```
+| Mode | What It Does |
+|------|-------------|
+| **Gap Analysis** | Score AWS config against 33 SOC 2 controls with AI-enriched explanations |
+| **Policy Generator** | Generate 10 types of SOC 2-compliant policy documents tailored to your company & stack |
+| **Ghost Audit** | Simulate a Big 4 adversarial auditor; get 10 hard challenge questions |
+| **Vendor Inheritance (TrustDNA)** | Map which controls your SaaS vendors (Stripe, AWS, Supabase, etc.) already cover |
+| **Breach Analysis** | Check your infrastructure exposure against 5 real-world breach case studies |
+| **Certification Pathfinder** | Get a personalised roadmap: Type I vs II, timeline, effort, and priority controls |
+| **Compliance Chatbot** | RAG-powered Q&A assistant grounded in the SOC 2 knowledge base |
 
-**Output:** Full policy document with:
-- Purpose & Scope
-- Incident categories and severity levels
-- Response timelines and escalation procedures
-- Technical playbooks (AWS-specific incidents)
-- Investigation procedures
-- Post-incident review checklist
-- Signature block with approval dates
+### Supporting Capabilities
+- Export compliance dashboards as **PDF reports** (`html2canvas` + `jspdf`)
+- Dark / light mode UI
+- Graceful AI fallback chain: Groq â†’ AWS Bedrock â†’ deterministic-only response
+- All responses under 500 ms for analysis modes
 
 ---
 
-### Mode 3: 👻 **Ghost Audit (ComplianceGhost)**
-Role-plays as a Big 4 auditor and challenges your compliance claims with adversarial questions.
+## Tech Stack
 
-**Auditor Profile:**
-- 15+ years SOC 2 audit experience
-- Skeptical of assertions without evidence
-- Focuses on continuous control implementation, not one-time fixes
-
-**API Endpoint:** `POST /api/pramanik/ghost-audit`
-
-**Example Request:**
-```json
-{
-  "companyName": "PayFlow",
-  "controls": ["CC6.1", "CC7.2", "CC6.5"],
-  "evidence_files": ["cloudtrail_logs.json", "iam_policy.json"]
-}
-```
-
-**Output:** 10 adversarial challenge questions such as:
-1. "You claim MFA is enforced. Show me CloudTrail logs of 10 failed MFA attempts AND proof users cannot disable MFA."
-2. "Your CloudTrail shows API calls from April, but there's a 3-day gap April 7-10. Why?"
-3. "When was the last employee terminated? Prove you disabled AWS/GitHub/VPN/email within 1 hour."
-4. "Show database credential rotation logs for the last 90 days."
-5. "Your vendor says they're SOC 2 Type II certified. Show their attestation report and DPA."
+| Category | Technologies |
+|----------|-------------|
+| **Frontend** | React 18, Vite, JavaScript (JSX), Tailwind CSS |
+| **Frontend â€” Animation** | Three.js (`@react-three/fiber`, `@react-three/drei`, `ogl`), GSAP, Framer Motion, Lenis |
+| **Frontend â€” Data** | Recharts, `jspdf`, `html2canvas` |
+| **Backend** | FastAPI (Python 3.11), Uvicorn, Pydantic |
+| **AI Orchestration** | LangGraph, LangChain-Groq, LangChain-Core |
+| **LLM Providers** | Groq (`llama-3.3-70b-versatile`), NVIDIA NIM (`deepseek-ai/deepseek-v3.2`), AWS Bedrock (`amazon.nova-micro-v1:0`) |
+| **RAG** | Rule-based keyword retrieval from in-memory SOC 2 knowledge dictionary |
+| **Authentication** | Google OAuth 2.0 (`@react-oauth/google`, exchange via `urllib`) |
+| **Database** | Supabase (PostgreSQL) |
+| **Cloud SDK** | `boto3` (AWS) |
+| **Frontend Deployment** | Vercel |
+| **Backend Deployment** | Render |
 
 ---
 
-### Mode 4: 🤝 **Vendor Inheritance (TrustDNA)**
-Maps which SOC 2 controls your vendor stack already covers for you.
+## System Architecture
 
-**Supported Vendors:**
-- AWS, Stripe, Supabase, Twilio, Vercel, GitHub, Cloudflare, Intercom, PagerDuty, Datadog
+```mermaid
+graph TD
+    User["User (Browser)"] -->|Login| Auth["Google OAuth\n/api/auth/google"]
+    Auth --> Frontend["React 18 Frontend\nVite + Tailwind"]
 
-**API Endpoint:** `POST /api/pramanik/vendor-inheritance`
+    Frontend -->|Upload AWS config JSON| Analyze["/api/analyze\n(FastAPI)"]
+    Frontend -->|Repo URL| GitHub["/api/scan-github\n(FastAPI)"]
+    Frontend -->|Compliance question| Chat["/api/pramanik/chat\n(FastAPI)"]
 
-**Example Request:**
-```json
-{
-  "vendors": ["AWS", "Stripe", "Supabase", "GitHub", "Datadog"],
-  "companyName": "PayFlow"
-}
-```
+    Analyze --> Det["Deterministic Engine\nsoc2_controls.py\n33 control checks"]
+    Det -->|Failed controls| Router["AI Router\nai_provider.py"]
+    Router -->|Primary| Groq["Groq\nllama-3.3-70b\nRisk explanations + fixes"]
+    Router -->|Fallback| Bedrock["AWS Bedrock\nNova Micro"]
+    Groq --> DB["Supabase\nPostgreSQL"]
+    Det --> DB
+    DB --> Frontend
 
-**Output:** Control coverage matrix:
-```
-✅ CC6.1 (Logical Access) — 70% covered via Stripe + GitHub
-   - Stripe: User authentication, API key management
-   - GitHub: SSO, access reviews, audit logs
-   ⚠️  YOU NEED: Employee access review process, MFA enforcement
+    GitHub --> LangGraph["LangGraph State Machine\nagent_graph.py"]
+    LangGraph --> CodeAgent["Code Agent\nRegex scan"]
+    LangGraph --> PolicyAgent["Policy Agent\nSECURITY.md check"]
+    LangGraph --> DepAgent["Dependency Agent\nOSV.dev CVEs"]
+    CodeAgent -->|findings > 0| AdvAgent["Adversary Agent\nGroq challenges findings"]
+    AdvAgent -->|escalated| CodeAgent
+    AdvAgent -->|resolved| CES["CES Engine\nScoring"]
+    CES --> Frontend
 
-❌ CC7.2 (Monitoring) — 30% covered via Datadog only
-   - Datadog: App-level monitoring only
-   - YOU NEED: API-level logging (CloudTrail), database query logging
-
-✅ CC9.2 (Vendor Management) — 90% covered
-   - All vendors have signed DPAs
+    Chat --> RAG["RAG Pipeline\ndeepseek_service.py\nKeyword to knowledge dict"]
+    RAG --> DeepSeek["NVIDIA NIM\nDeepSeek V3.2"]
+    DeepSeek --> Frontend
 ```
 
 ---
 
-### Mode 5: 💥 **Breach Playbook (IncidentResponse)**
-Generates step-by-step incident response procedures for specific breach scenarios.
+## How It Works
 
-**Supported Scenarios:**
-- AWS EC2 instance compromised
-- S3 data exposure / bucket made public
-- Database leaked customer data
-- GitHub credentials exposed
-- DDoS attack
-- Ransomware infection
+### AWS Configuration Analysis (Primary Flow)
 
-**API Endpoint:** `POST /api/pramanik/breach-playbook`
+1. **User authenticates** via Google OAuth; identity is stored in `localStorage`.
+2. **User uploads** an AWS configuration JSON (or connects live AWS).
+3. `POST /api/analyze` passes the config to `soc2_controls.py`, which runs **33 independent deterministic check functions** â€” no AI involved in pass/fail decisions.
+4. Failed controls are sent to **Groq** (`llama-3.3-70b-versatile`) with a structured JSON prompt to generate risk explanations, business impact, and step-by-step AWS console fixes.
+5. The `calculate_crvs()` function ranks findings by severity.
+6. Results are saved to **Supabase** (`scans` table). The config is stored as a baseline for future drift detection.
+7. The frontend renders the compliance score, critical gaps, and remediation plan.
 
-**Example Request:**
-```json
-{
-  "scenario": "S3 bucket made public",
-  "companyName": "PayFlow",
-  "stackTech": "AWS, Supabase",
-  "hasIncidentResponseTeam": true
-}
+### GitHub Repository Scan (LangGraph Flow)
+
+1. User provides a repo URL â†’ `POST /api/scan-github`.
+2. A **LangGraph `StateGraph`** runs three agents: Code (regex pattern matching), Policy (checks for `SECURITY.md`), and Dependency (CVE lookup via OSV.dev).
+3. If findings exist, a conditional edge routes to the **Adversary Agent**, which uses Groq to challenge the findings.
+4. If the Adversary escalates any finding, the graph **loops back** to re-scan flagged files specifically. This cyclic behaviour is the core reason LangGraph was chosen over standard LangChain chains.
+5. Final scored state is returned to the frontend.
+
 ```
-
-**Output:** Hour-by-hour playbook:
-```
-**IMMEDIATE (0-15 mins):**
-1. Trigger Incident Commander
-2. List all S3 buckets (aws s3 ls)
-3. Identify affected bucket: my-uploads-bucket
-4. Check S3 access logs for unauthorized access
-5. Take screenshot of bucket policy
-
-**CONTAINMENT (15-60 mins):**
-6. Revert bucket to PRIVATE immediately
-7. Enable versioning to preserve evidence
-8. Run AWS Config to check other buckets
-9. Notify security team of findings
-
-**INVESTIGATION (1-4 hours):**
-10. Query CloudTrail for API calls against bucket
-11. Check for data exfiltration in VPC Flow Logs
-12. Identify if credentials were exposed
-13. Document timeline of exposure
-
-**COMMUNICATION (1 hour):**
-14. Notify affected customers
-15. Prepare notification email
-16. Contact legal + insurance
+START
+  â†“
+code_agent (regex file scan)
+  â†“
+policy_agent (SECURITY.md check)
+  â†“
+dependency_agent (OSV.dev CVEs)
+  â†“
+[Conditional: findings > 0?]
+  â”œâ”€â”€ NO  â†’ ces_engine â†’ END
+  â””â”€â”€ YES â†’ adversary_agent (Groq challenges findings)
+                â†“
+            [Conditional: findings escalated?]
+                â”œâ”€â”€ YES â†’ increment_iteration â†’ code_agent (deep re-scan)
+                â””â”€â”€ NO  â†’ ces_engine â†’ END
 ```
 
 ---
 
-### Mode 6: 🛣️ **PathFinder (ComplianceRoadmap)**
-Generates a customized compliance roadmap with milestones and timelines.
+## AI / RAG Architecture
 
-**API Endpoint:** `POST /api/pramanik/pathfinder`
+### LLM Provider Strategy
 
-**Example Request:**
-```json
-{
-  "companyName": "PayFlow",
-  "currentScore": 35,
-  "targetScore": 85,
-  "timeline": "12 months",
-  "budget": "high",
-  "priorityControls": ["CC6.1", "CC7.2", "CC9.2"]
-}
+| Provider | Model | Role | Why |
+|----------|-------|------|-----|
+| **Groq** | `llama-3.3-70b-versatile` | Gap explanations, policy generation, adversary agent | Ultra-low LPU latency; generates large JSON for 33 controls without timeout |
+| **NVIDIA NIM** | `deepseek-ai/deepseek-v3.2` | RAG chatbot | Superior chain-of-thought reasoning for open-ended compliance Q&A |
+| **AWS Bedrock** | `amazon.nova-micro-v1:0` | Fallback / enterprise alternative | Switchable via `AI_PROVIDER` env var; zero external dependencies for AWS-mandated environments |
+
+Temperature is `0.3` for structured JSON output (Groq) and `0.7` for conversational chat (DeepSeek).
+
+### RAG Implementation (`deepseek_service.py`)
+
+> **Note:** This project uses **rule-based context retrieval** â€” not vector embeddings or a vector database. This was an intentional architectural decision.
+
+The pipeline:
+1. **Knowledge Base** â€” `SOC2_KNOWLEDGE_BASE`: a hardcoded Python dictionary containing all SOC 2 control domains, definitions, and criteria aliases.
+2. **Retrieval** â€” `build_rag_context()` converts the user query to lowercase and checks for keyword/alias matches (`"cc6"`, `"mfa"`, `"cloudtrail"`, etc.).
+3. **Context construction** â€” Matched entries are concatenated into a context string.
+4. **Prompt construction:**
+   ```
+   KNOWLEDGE BASE CONTEXT:
+   {rag_context}
+
+   USER QUESTION:
+   {user_question}
+   ```
+5. **Generation** â€” Sent to DeepSeek V3.2 via OpenAI-compatible SDK at `https://integrate.api.nvidia.com/v1`.
+6. **Fallback** â€” If DeepSeek fails, the same context string is forwarded to `ai_provider` (Groq/Bedrock).
+
+**Why not pgvector?** SOC 2 taxonomy is a fixed, 33-control standard. Keyword mapping achieves 100% precision on control retrieval with zero latency and no infrastructure cost. Vector search would be appropriate if ingesting arbitrary compliance PDFs at scale.
+
+### Deterministic vs. LLM Separation
+
+A critical design principle: **the AI never decides whether a control passes or fails.** `soc2_controls.py` contains pure Python logic (e.g., `if config.get("mfa_enforced") != True â†’ FAIL CC6.1`). LLMs are only used downstream to *explain* proven failures and generate remediation text. This eliminates hallucination from the compliance scoring entirely.
+
+### Reliability & Fallbacks
+
+- **Retry logic** â€” `ai_provider.py` wraps LLM calls with exponential backoff (`(attempt + 1) Ã— 1.5s`).
+- **Graceful degradation** â€” If Groq fails completely, `main.py` catches the exception and returns the deterministic scan results without AI explanations. Users are never blocked.
+- **Database failure isolation** â€” Supabase writes are wrapped in `try/except`; a DB outage does not block the API response.
+
+---
+
+## Project Structure
+
 ```
-
-**Output:** Phased roadmap:
-```
-PHASE 1: Foundation (Month 1-3) — Score: 35 → 50
-- Week 1-2: Enable CloudTrail (CC7.2) — 1 engineer, $0
-- Week 2-3: Implement MFA (CC6.1) — 0.5 engineers, $500
-- Week 3-4: S3 encryption (CC9.2) — 1 engineer, $0
-- Month 2-3: Document access procedures — 1 security person
-
-PHASE 2: Enhancement (Month 4-6) — Score: 50 → 70
-- Vendor SOC 2 attestation collection
-- Incident response procedure testing
-- Annual access review process
-- Backup/recovery testing
-
-PHASE 3: Optimization (Month 7-12) — Score: 70 → 85
-- Continuous monitoring (Datadog)
-- Security awareness training
-- Quarterly risk assessments
-- Audit readiness review
+Pramanik/
+â””â”€â”€ soc2-analyzer/
+    â”œâ”€â”€ backend/
+    â”‚   â”œâ”€â”€ main.py               # FastAPI entrypoint; routes, auth handlers, CORS
+    â”‚   â”œâ”€â”€ soc2_controls.py      # Deterministic SOC 2 evaluation engine (33 controls)
+    â”‚   â”œâ”€â”€ ai_provider.py        # Abstract LLM router (Groq â†” Bedrock) + retry logic
+    â”‚   â”œâ”€â”€ groq_service.py       # Groq integration: gap explanations, policies
+    â”‚   â”œâ”€â”€ deepseek_service.py   # DeepSeek RAG chatbot implementation
+    â”‚   â”œâ”€â”€ bedrock_service.py    # AWS Bedrock fallback integration
+    â”‚   â”œâ”€â”€ agent_graph.py        # LangGraph multi-agent state machine (GitHub scan)
+    â”‚   â”œâ”€â”€ github_agent.py       # GitHub repo scanner (regex + CVE checks)
+    â”‚   â”œâ”€â”€ adversary_agent.py    # AI auditor: challenges and escalates findings
+    â”‚   â”œâ”€â”€ pramanik_ai.py        # Policy generator, breach analysis, pathfinder logic
+    â”‚   â”œâ”€â”€ db.py                 # Supabase database operations
+    â”‚   â”œâ”€â”€ drift_detector.py     # Baseline comparison for compliance drift
+    â”‚   â””â”€â”€ requirements.txt
+    â”œâ”€â”€ frontend/
+    â”‚   â””â”€â”€ src/
+    â”‚       â”œâ”€â”€ components/
+    â”‚       â”‚   â”œâ”€â”€ PramanikAI.jsx    # AI Co-Pilot: 7-mode UI
+    â”‚       â”‚   â””â”€â”€ PramanikAI.css
+    â”‚       â”œâ”€â”€ App.jsx               # Main entry; state-based routing
+    â”‚       â””â”€â”€ ThemeContext.jsx      # Dark / light mode state
+    â”‚   â”œâ”€â”€ package.json
+    â”‚   â”œâ”€â”€ tailwind.config.js
+    â”‚   â””â”€â”€ vercel.json               # Vercel deployment config
+    â”œâ”€â”€ render.yaml                   # Render backend deployment config
+    â”œâ”€â”€ PRAMANIK_AI_GUIDE.md
+    â”œâ”€â”€ PRAMANIK_AI_QUICKSTART.md
+    â””â”€â”€ PRAMANIK_INTERVIEW_MASTER.md
 ```
 
 ---
 
-### Mode 7: 💬 **Compliance Chatbot (LiveSupport)**
-Real-time conversational AI assistant answering SOC 2 compliance questions.
+## Authentication
 
-**API Endpoint:** `WebSocket /api/pramanik/chat` or `POST /api/pramanik/chat-message`
+Authentication uses **Google OAuth 2.0**:
 
-**Capabilities:**
-- Answer questions about specific SOC 2 controls
-- Explain compliance requirements
-- Suggest quick fixes for common issues
-- Provide startup-specific guidance
-- Link to relevant AWS documentation
+1. The frontend uses `@react-oauth/google` to open a Google sign-in popup.
+2. Google returns an authorization `code`.
+3. The frontend sends the code to `POST /api/auth/google`.
+4. The FastAPI backend exchanges it for an access token using `urllib.request`, then fetches the user profile from `https://www.googleapis.com/oauth2/v3/userinfo`.
+5. The backend returns `email`, `name`, and `picture` to the frontend.
+6. The frontend stores the user object in `localStorage("pramanik_user")` and updates the app state.
 
-**Example Conversation:**
-```
-User: "What do I need to do for MFA?"
-Assistant: "MFA (Multi-Factor Authentication) is required by CC6.1.
-
-For AWS:
-1. Enable MFA in IAM console
-2. Require MFA for root account (mandatory)
-3. Enforce MFA for all users (via IAM policy)
-4. Log MFA attempts in CloudTrail
-5. Test that users cannot bypass MFA
-
-For GitHub/Stripe:
-- Both require MFA for organizational accounts
-- Create enforcement policies
-
-Would you like me to generate MFA enforcement policy?"
-```
+> **Current limitation:** Subsequent API requests do not carry a verified JWT. The `user_id` is sent as part of the request payload. Per-route authorization middleware (FastAPI `Depends(verify_token)`) and Supabase Row Level Security are planned improvements.
 
 ---
 
-## 🏗️ System Architecture
+## Database
 
-### Backend Components
+**Database:** Supabase (managed PostgreSQL)  
+**Client:** `supabase` Python package via REST API
 
-#### 1. **Main FastAPI Application** (`backend/main.py`)
-- REST API routing
-- CORS configuration
-- Request validation
-- File upload handling
-- Response formatting
+| Table | Purpose |
+|-------|---------|
+| `scans` | Gap analysis runs: `user_id`, `company_name`, `score`, `results` (JSONB), `config` (JSONB) |
+| `baselines` | Known-good infrastructure configurations for drift detection |
+| `audit_questions` | Dynamically seeded adversarial audit questions |
+| `github_scans` | LangGraph multi-agent run results and findings |
 
-#### 2. **Pramanik AI Engine** (`backend/pramanik_ai.py`)
-- Core RAG orchestration
-- 7 mode implementations
-- Prompt engineering for each mode
-- Response formatting
-- Evidence chain tracking
-
-#### 3. **SOC 2 Knowledge Base** (`backend/soc2_controls.py`)
-- 35+ granular SOC 2 controls
-- Control-to-framework mappings
-- Compliance scoring logic
-- Industry benchmarks
-
-#### 4. **AI Service Integrations**
-- `bedrock_service.py` — AWS Bedrock (primary)
-- `deepseek_service.py` — NVIDIA Deepseek API (RAG primary)
-- `groq_service.py` — Groq API (fallback)
-- Automatic failover logic
-
-#### 5. **Database Layer** (`backend/db.py`)
-- Supabase integration
-- Scan history persistence
-- Evidence document storage
-- User profile management
-
-#### 6. **Utilities**
-- `framework_mappings.py` — ISO 27001/HIPAA score calculation
-- `drift_detector.py` — Control compliance trend tracking
-- `soc2_controls.py` — Master control definitions
-
-### Frontend Components
-
-#### 1. **PramanikAI.jsx**
-- 7-mode UI switcher
-- Real-time chat interface
-- Form inputs for each mode
-- Result display and formatting
-- PDF export integration
-
-#### 2. **ComplianceChatBot.jsx**
-- Conversational UI
-- Message history
-- Typing indicators
-- Real-time response streaming
-
-#### 3. **Integration Points**
-- Embedded in Dashboard
-- Accessible via ChatLauncher
-- Popup panel support
-- Dark/light mode support
+PostgreSQL was chosen over NoSQL because SOC 2 data is relational (users â†’ scans â†’ controls â†’ audit questions), and strict schema integrity matters for a compliance product.
 
 ---
 
-## 🚀 Setup & Deployment
+## API Overview
+
+All endpoints are served by the FastAPI backend.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/analyze` | Deterministic AWS config evaluation + LLM enrichment |
+| `POST` | `/api/scan-aws` | Live AWS environment scan via `boto3` |
+| `POST` | `/api/scan-github` | LangGraph multi-agent GitHub repository scan |
+| `POST` | `/api/pramanik/chat` | RAG-powered DeepSeek compliance chatbot |
+| `POST` | `/api/pramanik/gap-analysis` | Pramanik Co-Pilot: gap analysis mode |
+| `POST` | `/api/pramanik/policy` | Generate a SOC 2 compliance policy document |
+| `POST` | `/api/pramanik/ghost-audit` | Generate adversarial Big 4 auditor questions |
+| `POST` | `/api/pramanik/vendor-inheritance` | Map vendor stack to SOC 2 control coverage |
+| `POST` | `/api/pramanik/breach-analysis` | Assess exposure against real-world breaches |
+| `POST` | `/api/pramanik/certification-path` | Generate personalised certification roadmap |
+| `POST` | `/api/auth/google` | Google OAuth code exchange |
+| `GET`  | `/api/health` | Health check (used by Render) |
+
+---
+
+## Environment Variables
+
+Configure these in `soc2-analyzer/backend/.env` for local development. On Render, set them as secret environment variables (never commit actual values).
+
+| Variable | Purpose |
+|----------|---------|
+| `GROQ_API_KEY` | Groq API key (primary LLM for gap analysis, policies, adversary agent) |
+| `DEEPSEEK_API_KEY` | NVIDIA NIM API key for DeepSeek V3.2 chatbot |
+| `DEEPSEEK_BASE_URL` | NVIDIA NIM base URL |
+| `AI_PROVIDER` | Switch between `groq` and `bedrock` for the primary analysis LLM |
+| `AWS_ACCESS_KEY_ID` | AWS credentials for Bedrock fallback and live AWS scanning |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key |
+| `AWS_REGION` | AWS region (e.g., `ap-south-1`) |
+| `SUPABASE_URL` | Supabase project REST URL |
+| `SUPABASE_ANON_KEY` | Supabase anon/public key |
+| `SUPABASE_SERVICE_KEY` | Supabase service role key (server-side operations) |
+| `GOOGLE_CLIENT_ID` | Google OAuth 2.0 client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth 2.0 client secret |
+| `GITHUB_CLIENT_ID` | GitHub OAuth app client ID |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth app client secret |
+| `CORS_ORIGINS` | Comma-separated allowed origins (e.g., your Vercel frontend URL) |
+
+---
+
+## Getting Started
 
 ### Prerequisites
-- Python 3.8+
-- Node.js 16+
-- Git
 
-### 1. Backend Setup
+- Python 3.11+
+- Node.js 18+
+- A Supabase project
+- Groq API key (free tier available at [console.groq.com](https://console.groq.com))
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/Ishaan6286/Pramanik.git
+cd Pramanik/soc2-analyzer
+```
+
+### 2. Set up the backend
 
 ```bash
 cd backend
-
-# Create virtual environment
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+# Windows:
+venv\Scripts\activate
+# macOS / Linux:
+source venv/bin/activate
 
-# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Configure Environment Variables
+Create `backend/.env` with the variables listed in the [Environment Variables](#environment-variables) section above.
 
-Create `backend/.env`:
-```env
-# AWS Bedrock (primary AI)
-AWS_ACCESS_KEY_ID=your_key_here
-AWS_SECRET_ACCESS_KEY=your_secret_here
-AWS_REGION=ap-south-1
-
-# Deepseek (RAG AI - primary for chatbot)
-DEEPSEEK_API_KEY=your_deepseek_key
-DEEPSEEK_BASE_URL=https://integrate.api.nvidia.com/v1
-DEEPSEEK_MODEL=deepseek-chat
-
-# Groq (fallback AI)
-GROQ_API_KEY=your_groq_key
-
-# Supabase Database
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_KEY=your_service_key
-
-# Server
-PORT=3001
-NODE_ENV=development
-```
-
-### 3. Frontend Setup
+### 3. Start the backend
 
 ```bash
-cd frontend
+uvicorn main:app --reload --port 8000
+# Health check: http://localhost:8000/api/health
+```
+
+### 4. Set up and start the frontend
+
+```bash
+cd ../frontend
 npm install
 npm run dev
+# App available at: http://localhost:5173
 ```
 
-### 4. Start Services
+### 5. Test an endpoint
 
-**Terminal 1 — Backend:**
 ```bash
-cd backend
-uvicorn main:app --reload --port 3001
-```
-
-**Terminal 2 — Frontend:**
-```bash
-cd frontend
-npm run dev
-```
-
-**Terminal 3 — Node Server (Optional):**
-```bash
-cd backend
-node server.js
-```
-
----
-
-## 📡 API Reference
-
-### Gap Analysis
-```
-POST /api/pramanik/gap-analysis
-Content-Type: application/json
-
-Request:
-{
-  "mfa_enforced": boolean,
-  "cloudtrail_enabled": boolean,
-  "s3_public_access": boolean,
-  ...
-}
-
-Response:
-{
-  "score": number,
-  "passed": number,
-  "total": number,
-  "results": [
-    {
-      "control_id": "CC6.1",
-      "title": string,
-      "status": "PASSED" | "FAILED",
-      "risk_explanation": string,
-      "fix_steps": string[],
-      "business_impact": string
-    }
-  ]
-}
-```
-
-### Policy Generator
-```
-POST /api/pramanik/policy
-Content-Type: application/json
-
-Request:
-{
-  "policyType": string,
-  "companyName": string,
-  "stackTech": string,
-  "policyOwner": string
-}
-
-Response:
-{
-  "policy_id": string,
-  "content": string (markdown),
-  "approval_block": string,
-  "revision_history": [],
-  "pdf_download_url": string
-}
-```
-
-### Ghost Audit
-```
-POST /api/pramanik/ghost-audit
-Content-Type: application/json
-
-Request:
-{
-  "companyName": string,
-  "controls": string[],
-  "evidence_files": string[]
-}
-
-Response:
-{
-  "audit_id": string,
-  "auditor_name": string,
-  "challenges": [
-    {
-      "question": string,
-      "difficulty": "EASY" | "MEDIUM" | "HARD",
-      "expected_evidence": string[],
-      "compliance_weight": number
-    }
-  ]
-}
-```
-
-### Vendor Inheritance
-```
-POST /api/pramanik/vendor-inheritance
-Content-Type: application/json
-
-Request:
-{
-  "vendors": string[],
-  "companyName": string
-}
-
-Response:
-{
-  "vendor_matrix": {
-    "vendor_name": {
-      "coverage_percentage": number,
-      "controls_covered": string[],
-      "controls_needed": string[],
-      "soc2_report_url": string,
-      "dpa_signed": boolean
-    }
-  },
-  "overall_coverage": number,
-  "gaps": string[]
-}
-```
-
----
-
-## 🔧 Configuration & Customization
-
-### Adding Custom SOC 2 Controls
-
-Edit `backend/soc2_controls.py`:
-
-```python
-SOC2_CONTROLS = {
-    "CC6.1": {
-        "name": "Logical access controls...",
-        "category": "CC6",
-        "severity": "CRITICAL",
-        "framework_mappings": {
-            "ISO27001": "A.9.2.1",
-            "HIPAA": "164.312(a)(2)(i)"
-        }
-    }
-}
-```
-
-### Customizing LLM Prompts
-
-Edit `backend/pramanik_ai.py`:
-
-```python
-SYSTEM_PROMPTS = {
-    "gap_analysis": "You are a SOC 2 compliance expert...",
-    "policy_generator": "Generate a professional policy...",
-    # Edit prompts for your use case
-}
-```
-
-### Adding New AI Providers
-
-```python
-# backend/my_service.py
-def generate_explanations(failed_controls, company):
-    # Implement your AI provider logic
-    pass
-
-# Update backend/main.py to include in failover chain
-```
-
----
-
-## 📊 Database Schema
-
-### Scans Table (Supabase)
-```sql
-CREATE TABLE scans (
-  id UUID PRIMARY KEY,
-  user_id UUID,
-  company_name VARCHAR,
-  industry VARCHAR,
-  score FLOAT,
-  passed INT,
-  total INT,
-  results JSONB,
-  priority_fixes JSONB,
-  framework_scores JSONB,
-  config JSONB,
-  created_at TIMESTAMP,
-  updated_at TIMESTAMP
-);
-```
-
-### Controls Table
-```sql
-CREATE TABLE controls (
-  id VARCHAR PRIMARY KEY,
-  name VARCHAR,
-  category VARCHAR,
-  severity VARCHAR,
-  mappings JSONB,
-  created_at TIMESTAMP
-);
-```
-
----
-
-## 🧪 Testing
-
-### Test Gap Analysis Locally
-```bash
-curl -X POST http://localhost:3001/api/pramanik/gap-analysis \
+curl -X POST http://localhost:8000/api/pramanik/gap-analysis \
   -H "Content-Type: application/json" \
   -d '{
     "mfa_enforced": false,
     "cloudtrail_enabled": false,
-    "s3_public_access": true
+    "s3_public_access": true,
+    "rds_encryption": true,
+    "tls_enabled": true,
+    "security_groups_configured": false,
+    "least_privilege_applied": false,
+    "cloudwatch_enabled": false
   }'
 ```
 
-### Test with Sample Data
-```bash
-python backend/pramanik_ai.py
-# Runs local tests of all 7 modes
-```
+---
+
+## Deployment
+
+| Layer | Platform | Config |
+|-------|----------|--------|
+| **Frontend** | Vercel | [`frontend/vercel.json`](soc2-analyzer/frontend/vercel.json) â€” Vite build, SPA rewrites |
+| **Backend** | Render (Free tier) | [`render.yaml`](soc2-analyzer/render.yaml) â€” Python 3.11, Uvicorn start command |
+
+The `render.yaml` configures all required environment variable keys. Secret values (API keys, DB credentials) are set through the Render dashboard and are never committed to the repository.
 
 ---
 
-## 🐛 Troubleshooting
+## Security
 
-### LLM Fallbacks Not Working
-- Check API keys in `.env`
-- Verify CORS settings in `main.py`
-- Test each AI provider independently
-
-### Database Connection Issues
-- Verify Supabase credentials
-- Check network connectivity
-- Enable verbose logging: `NODE_ENV=debug`
-
-### Slow Response Times
-- Check LLM provider rate limits
-- Use caching for repeated queries
-- Enable response streaming
+| Mechanism | Status |
+|-----------|--------|
+| **CORS** | Configured in `main.py` via `CORS_ORIGINS` env var; only listed origins are permitted |
+| **Secret isolation** | All API keys (Groq, Supabase, DeepSeek, AWS) are kept strictly on the backend; never exposed to the frontend |
+| **No AI hallucination in scoring** | Pass/fail decisions are fully deterministic; LLMs only generate explanatory text |
+| **Error isolation** | AI failures and database failures are caught and do not leak internal details to API consumers |
+| **Backend JWT / RLS** | Not yet implemented â€” planned improvement (see below) |
 
 ---
 
-## 📝 Development Roadmap
+## Future Improvements
 
-- [ ] Vector search integration (Pinecone/Weaviate)
-- [ ] Real-time collaboration features
-- [ ] Custom compliance frameworks
-- [ ] Automated evidence collection
-- [ ] Machine learning-based risk scoring
-- [ ] Mobile app (iOS/Android)
-- [ ] Multi-language support
-
----
-
-## 📄 License
-
-This RAG system is part of the soc2-analyzer project. See [LICENSE](LICENSE) for details.
+- **JWT authentication middleware** â€” Issue HttpOnly signed JWTs on login and validate on every protected route with FastAPI `Depends(verify_token)`
+- **Supabase Row Level Security** â€” Enforce per-user data isolation at the database layer
+- **Async LLM pipeline** â€” Decouple LLM generation from the HTTP request cycle using Celery + SQS; return deterministic scores immediately and stream AI explanations via WebSocket
+- **Vector RAG upgrade** â€” Chunk SOC 2 PDF manuals, generate embeddings with `text-embedding-3-small`, and store in Supabase pgvector for broader Q&A coverage
+- **Real-time AWS Config scanning** â€” Automate gap analysis using AWS Config rules rather than manual JSON upload
+- **PDF export** of full gap analysis reports
 
 ---
 
-## 🤝 Contributing
+## Additional Documentation
 
-Contributions are welcome! Areas for contribution:
-- Additional SOC 2 controls
-- New AI provider integrations
-- Frontend enhancements
-- Documentation improvements
-- Test coverage
-
-Submit PRs to the `main` branch with test coverage.
+| Document | Description |
+|----------|-------------|
+| [`PRAMANIK_AI_QUICKSTART.md`](soc2-analyzer/PRAMANIK_AI_QUICKSTART.md) | Fast setup guide and curl examples for all 7 API modes |
+| [`PRAMANIK_AI_GUIDE.md`](soc2-analyzer/PRAMANIK_AI_GUIDE.md) | Deep documentation: all 7 modes with full I/O examples and how to extend the system |
+| [`PRAMANIK_INTERVIEW_MASTER.md`](soc2-analyzer/PRAMANIK_INTERVIEW_MASTER.md) | Forensic technical analysis: architecture decisions, LLM choices, LangGraph flow, and interview Q&A |
 
 ---
 
-## 📬 Support
+## Author
 
-- **Documentation:** [PRAMANIK_AI_GUIDE.md](PRAMANIK_AI_GUIDE.md)
-- **Issues:** GitHub Issues
-- **Questions:** Discussion forum
+**Ishaan Pramanik**  
+GitHub: [@Ishaan6286](https://github.com/Ishaan6286)  
+Repository: [github.com/Ishaan6286/Pramanik](https://github.com/Ishaan6286/Pramanik)
 
 ---
 
-**Last Updated:** March 2026  
-**Authors:** Pramanik AI Development Team
+*Built for Indian SaaS startups scaling to enterprise customers who require SOC 2 Type II certification.*
