@@ -1,6 +1,6 @@
 # Pramanik AI : SOC 2 Compliance Co-Pilot
 
-> An AI-powered SOC 2 compliance analyzer for SaaS startups. Upload your AWS configuration, scan live infrastructure or GitHub repositories, and get instant gap analysis, AI-generated remediation steps, policy documents, and adversarial audit simulations â€” in minutes, not months.
+> An AI-powered SOC 2 compliance analyzer for SaaS startups. Upload your AWS configuration, scan live infrastructure or GitHub repositories, and get instant gap analysis, AI-generated remediation steps, policy documents, and adversarial audit simulations — in minutes, not months.
 
 [![GitHub repo](https://img.shields.io/badge/GitHub-Ishaan6286%2FPramanik-blue?logo=github)](https://github.com/Ishaan6286/Pramanik)
 [![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
@@ -12,7 +12,7 @@
 
 ## Overview
 
-SOC 2 Type II compliance is notoriously slow, expensive, and confusing for startups. Security audits require mapping dense AWS configurations to abstract compliance criteria â€” a process that traditionally takes **months of manual work** and expensive consultants.
+SOC 2 Type II compliance is notoriously slow, expensive, and confusing for startups. Security audits require mapping dense AWS configurations to abstract compliance criteria — a process that traditionally takes **months of manual work** and expensive consultants.
 
 **Pramanik AI** automates this. A CTO or DevOps engineer connects their AWS account or GitHub repository. A deterministic Python engine evaluates the infrastructure against all **33 SOC 2 Trust Services Criteria**. Failed controls are sent to LLMs that generate plain-English risk explanations and step-by-step AWS console fixes. The system also generates complete compliance policy documents, simulates adversarial auditor interviews, maps vendor coverage, and produces a personalised certification roadmap.
 
@@ -23,10 +23,10 @@ SOC 2 Type II compliance is notoriously slow, expensive, and confusing for start
 ## Key Features
 
 ### Core Analysis
-- **AWS Gap Analysis** â€” Deterministic evaluation of AWS configs against all 33 SOC 2 controls; outputs a compliance score, severity-ranked failures (Critical / High / Medium), and step-by-step AWS console remediation steps
-- **Live AWS Scanning** â€” Connects directly to AWS via `boto3` to pull live infrastructure state
-- **GitHub Repository Scanning** â€” LangGraph multi-agent pipeline scans repos for hardcoded secrets, missing security docs, and vulnerable dependencies (CVE checks via OSV.dev)
-- **Compliance Drift Detection** â€” Compares current configs against stored baselines to surface regressions
+- **AWS Gap Analysis** — Deterministic evaluation of AWS configs against all 33 SOC 2 controls; outputs a compliance score, severity-ranked failures (Critical / High / Medium), and step-by-step AWS console remediation steps
+- **Live AWS Scanning** — Connects directly to AWS via `boto3` to pull live infrastructure state
+- **GitHub Repository Scanning** — LangGraph multi-agent pipeline scans repos for hardcoded secrets, missing security docs, and vulnerable dependencies (CVE checks via OSV.dev)
+- **Compliance Drift Detection** — Compares current configs against stored baselines to surface regressions
 
 ### AI Modes (Pramanik AI Co-Pilot)
 
@@ -43,7 +43,7 @@ SOC 2 Type II compliance is notoriously slow, expensive, and confusing for start
 ### Supporting Capabilities
 - Export compliance dashboards as **PDF reports** (`html2canvas` + `jspdf`)
 - Dark / light mode UI
-- Graceful AI fallback chain: Groq â†’ AWS Bedrock â†’ deterministic-only response
+- Graceful AI fallback chain: Groq → AWS Bedrock → deterministic-only response
 - All responses under 500 ms for analysis modes
 
 ---
@@ -53,8 +53,8 @@ SOC 2 Type II compliance is notoriously slow, expensive, and confusing for start
 | Category | Technologies |
 |----------|-------------|
 | **Frontend** | React 18, Vite, JavaScript (JSX), Tailwind CSS |
-| **Frontend â€” Animation** | Three.js (`@react-three/fiber`, `@react-three/drei`, `ogl`), GSAP, Framer Motion, Lenis |
-| **Frontend â€” Data** | Recharts, `jspdf`, `html2canvas` |
+| **Frontend — Animation** | Three.js (`@react-three/fiber`, `@react-three/drei`, `ogl`), GSAP, Framer Motion, Lenis |
+| **Frontend — Data** | Recharts, `jspdf`, `html2canvas` |
 | **Backend** | FastAPI (Python 3.11), Uvicorn, Pydantic |
 | **AI Orchestration** | LangGraph, LangChain-Groq, LangChain-Core |
 | **LLM Providers** | Groq (`llama-3.3-70b-versatile`), NVIDIA NIM (`deepseek-ai/deepseek-v3.2`), AWS Bedrock (`amazon.nova-micro-v1:0`) |
@@ -108,7 +108,7 @@ graph TD
 
 1. **User authenticates** via Google OAuth; identity is stored in `localStorage`.
 2. **User uploads** an AWS configuration JSON (or connects live AWS).
-3. `POST /api/analyze` passes the config to `soc2_controls.py`, which runs **33 independent deterministic check functions** â€” no AI involved in pass/fail decisions.
+3. `POST /api/analyze` passes the config to `soc2_controls.py`, which runs **33 independent deterministic check functions** — no AI involved in pass/fail decisions.
 4. Failed controls are sent to **Groq** (`llama-3.3-70b-versatile`) with a structured JSON prompt to generate risk explanations, business impact, and step-by-step AWS console fixes.
 5. The `calculate_crvs()` function ranks findings by severity.
 6. Results are saved to **Supabase** (`scans` table). The config is stored as a baseline for future drift detection.
@@ -116,7 +116,7 @@ graph TD
 
 ### GitHub Repository Scan (LangGraph Flow)
 
-1. User provides a repo URL â†’ `POST /api/scan-github`.
+1. User provides a repo URL → `POST /api/scan-github`.
 2. A **LangGraph `StateGraph`** runs three agents: Code (regex pattern matching), Policy (checks for `SECURITY.md`), and Dependency (CVE lookup via OSV.dev).
 3. If findings exist, a conditional edge routes to the **Adversary Agent**, which uses Groq to challenge the findings.
 4. If the Adversary escalates any finding, the graph **loops back** to re-scan flagged files specifically. This cyclic behaviour is the core reason LangGraph was chosen over standard LangChain chains.
@@ -124,20 +124,20 @@ graph TD
 
 ```
 START
-  â†“
+  ↓
 code_agent (regex file scan)
-  â†“
+  ↓
 policy_agent (SECURITY.md check)
-  â†“
+  ↓
 dependency_agent (OSV.dev CVEs)
-  â†“
+  ↓
 [Conditional: findings > 0?]
-  â”œâ”€â”€ NO  â†’ ces_engine â†’ END
-  â””â”€â”€ YES â†’ adversary_agent (Groq challenges findings)
-                â†“
+  ├── NO  → ces_engine → END
+  └── YES → adversary_agent (Groq challenges findings)
+                ↓
             [Conditional: findings escalated?]
-                â”œâ”€â”€ YES â†’ increment_iteration â†’ code_agent (deep re-scan)
-                â””â”€â”€ NO  â†’ ces_engine â†’ END
+                ├── YES → increment_iteration → code_agent (deep re-scan)
+                └── NO  → ces_engine → END
 ```
 
 ---
@@ -156,12 +156,12 @@ Temperature is `0.3` for structured JSON output (Groq) and `0.7` for conversatio
 
 ### RAG Implementation (`deepseek_service.py`)
 
-> **Note:** This project uses **rule-based context retrieval** â€” not vector embeddings or a vector database. This was an intentional architectural decision.
+> **Note:** This project uses **rule-based context retrieval** — not vector embeddings or a vector database. This was an intentional architectural decision.
 
 The pipeline:
-1. **Knowledge Base** â€” `SOC2_KNOWLEDGE_BASE`: a hardcoded Python dictionary containing all SOC 2 control domains, definitions, and criteria aliases.
-2. **Retrieval** â€” `build_rag_context()` converts the user query to lowercase and checks for keyword/alias matches (`"cc6"`, `"mfa"`, `"cloudtrail"`, etc.).
-3. **Context construction** â€” Matched entries are concatenated into a context string.
+1. **Knowledge Base** — `SOC2_KNOWLEDGE_BASE`: a hardcoded Python dictionary containing all SOC 2 control domains, definitions, and criteria aliases.
+2. **Retrieval** — `build_rag_context()` converts the user query to lowercase and checks for keyword/alias matches (`"cc6"`, `"mfa"`, `"cloudtrail"`, etc.).
+3. **Context construction** — Matched entries are concatenated into a context string.
 4. **Prompt construction:**
    ```
    KNOWLEDGE BASE CONTEXT:
@@ -170,20 +170,20 @@ The pipeline:
    USER QUESTION:
    {user_question}
    ```
-5. **Generation** â€” Sent to DeepSeek V3.2 via OpenAI-compatible SDK at `https://integrate.api.nvidia.com/v1`.
-6. **Fallback** â€” If DeepSeek fails, the same context string is forwarded to `ai_provider` (Groq/Bedrock).
+5. **Generation** — Sent to DeepSeek V3.2 via OpenAI-compatible SDK at `https://integrate.api.nvidia.com/v1`.
+6. **Fallback** — If DeepSeek fails, the same context string is forwarded to `ai_provider` (Groq/Bedrock).
 
 **Why not pgvector?** SOC 2 taxonomy is a fixed, 33-control standard. Keyword mapping achieves 100% precision on control retrieval with zero latency and no infrastructure cost. Vector search would be appropriate if ingesting arbitrary compliance PDFs at scale.
 
 ### Deterministic vs. LLM Separation
 
-A critical design principle: **the AI never decides whether a control passes or fails.** `soc2_controls.py` contains pure Python logic (e.g., `if config.get("mfa_enforced") != True â†’ FAIL CC6.1`). LLMs are only used downstream to *explain* proven failures and generate remediation text. This eliminates hallucination from the compliance scoring entirely.
+A critical design principle: **the AI never decides whether a control passes or fails.** `soc2_controls.py` contains pure Python logic (e.g., `if config.get("mfa_enforced") != True → FAIL CC6.1`). LLMs are only used downstream to *explain* proven failures and generate remediation text. This eliminates hallucination from the compliance scoring entirely.
 
 ### Reliability & Fallbacks
 
-- **Retry logic** â€” `ai_provider.py` wraps LLM calls with exponential backoff (`(attempt + 1) Ã— 1.5s`).
-- **Graceful degradation** â€” If Groq fails completely, `main.py` catches the exception and returns the deterministic scan results without AI explanations. Users are never blocked.
-- **Database failure isolation** â€” Supabase writes are wrapped in `try/except`; a DB outage does not block the API response.
+- **Retry logic** — `ai_provider.py` wraps LLM calls with exponential backoff (`(attempt + 1) × 1.5s`).
+- **Graceful degradation** — If Groq fails completely, `main.py` catches the exception and returns the deterministic scan results without AI explanations. Users are never blocked.
+- **Database failure isolation** — Supabase writes are wrapped in `try/except`; a DB outage does not block the API response.
 
 ---
 
@@ -191,35 +191,35 @@ A critical design principle: **the AI never decides whether a control passes or 
 
 ```
 Pramanik/
-â””â”€â”€ soc2-analyzer/
-    â”œâ”€â”€ backend/
-    â”‚   â”œâ”€â”€ main.py               # FastAPI entrypoint; routes, auth handlers, CORS
-    â”‚   â”œâ”€â”€ soc2_controls.py      # Deterministic SOC 2 evaluation engine (33 controls)
-    â”‚   â”œâ”€â”€ ai_provider.py        # Abstract LLM router (Groq â†” Bedrock) + retry logic
-    â”‚   â”œâ”€â”€ groq_service.py       # Groq integration: gap explanations, policies
-    â”‚   â”œâ”€â”€ deepseek_service.py   # DeepSeek RAG chatbot implementation
-    â”‚   â”œâ”€â”€ bedrock_service.py    # AWS Bedrock fallback integration
-    â”‚   â”œâ”€â”€ agent_graph.py        # LangGraph multi-agent state machine (GitHub scan)
-    â”‚   â”œâ”€â”€ github_agent.py       # GitHub repo scanner (regex + CVE checks)
-    â”‚   â”œâ”€â”€ adversary_agent.py    # AI auditor: challenges and escalates findings
-    â”‚   â”œâ”€â”€ pramanik_ai.py        # Policy generator, breach analysis, pathfinder logic
-    â”‚   â”œâ”€â”€ db.py                 # Supabase database operations
-    â”‚   â”œâ”€â”€ drift_detector.py     # Baseline comparison for compliance drift
-    â”‚   â””â”€â”€ requirements.txt
-    â”œâ”€â”€ frontend/
-    â”‚   â””â”€â”€ src/
-    â”‚       â”œâ”€â”€ components/
-    â”‚       â”‚   â”œâ”€â”€ PramanikAI.jsx    # AI Co-Pilot: 7-mode UI
-    â”‚       â”‚   â””â”€â”€ PramanikAI.css
-    â”‚       â”œâ”€â”€ App.jsx               # Main entry; state-based routing
-    â”‚       â””â”€â”€ ThemeContext.jsx      # Dark / light mode state
-    â”‚   â”œâ”€â”€ package.json
-    â”‚   â”œâ”€â”€ tailwind.config.js
-    â”‚   â””â”€â”€ vercel.json               # Vercel deployment config
-    â”œâ”€â”€ render.yaml                   # Render backend deployment config
-    â”œâ”€â”€ PRAMANIK_AI_GUIDE.md
-    â”œâ”€â”€ PRAMANIK_AI_QUICKSTART.md
-    â””â”€â”€ PRAMANIK_INTERVIEW_MASTER.md
+└── soc2-analyzer/
+    ├── backend/
+    │   ├── main.py               # FastAPI entrypoint; routes, auth handlers, CORS
+    │   ├── soc2_controls.py      # Deterministic SOC 2 evaluation engine (33 controls)
+    │   ├── ai_provider.py        # Abstract LLM router (Groq ↔ Bedrock) + retry logic
+    │   ├── groq_service.py       # Groq integration: gap explanations, policies
+    │   ├── deepseek_service.py   # DeepSeek RAG chatbot implementation
+    │   ├── bedrock_service.py    # AWS Bedrock fallback integration
+    │   ├── agent_graph.py        # LangGraph multi-agent state machine (GitHub scan)
+    │   ├── github_agent.py       # GitHub repo scanner (regex + CVE checks)
+    │   ├── adversary_agent.py    # AI auditor: challenges and escalates findings
+    │   ├── pramanik_ai.py        # Policy generator, breach analysis, pathfinder logic
+    │   ├── db.py                 # Supabase database operations
+    │   ├── drift_detector.py     # Baseline comparison for compliance drift
+    │   └── requirements.txt
+    ├── frontend/
+    │   └── src/
+    │       ├── components/
+    │       │   ├── PramanikAI.jsx    # AI Co-Pilot: 7-mode UI
+    │       │   └── PramanikAI.css
+    │       ├── App.jsx               # Main entry; state-based routing
+    │       └── ThemeContext.jsx      # Dark / light mode state
+    │   ├── package.json
+    │   ├── tailwind.config.js
+    │   └── vercel.json               # Vercel deployment config
+    ├── render.yaml                   # Render backend deployment config
+    ├── PRAMANIK_AI_GUIDE.md
+    ├── PRAMANIK_AI_QUICKSTART.md
+    └── PRAMANIK_INTERVIEW_MASTER.md
 ```
 
 ---
@@ -251,7 +251,7 @@ Authentication uses **Google OAuth 2.0**:
 | `audit_questions` | Dynamically seeded adversarial audit questions |
 | `github_scans` | LangGraph multi-agent run results and findings |
 
-PostgreSQL was chosen over NoSQL because SOC 2 data is relational (users â†’ scans â†’ controls â†’ audit questions), and strict schema integrity matters for a compliance product.
+PostgreSQL was chosen over NoSQL because SOC 2 data is relational (users → scans → controls → audit questions), and strict schema integrity matters for a compliance product.
 
 ---
 
@@ -370,8 +370,8 @@ curl -X POST http://localhost:8000/api/pramanik/gap-analysis \
 
 | Layer | Platform | Config |
 |-------|----------|--------|
-| **Frontend** | Vercel | [`frontend/vercel.json`](soc2-analyzer/frontend/vercel.json) â€” Vite build, SPA rewrites |
-| **Backend** | Render (Free tier) | [`render.yaml`](soc2-analyzer/render.yaml) â€” Python 3.11, Uvicorn start command |
+| **Frontend** | Vercel | [`frontend/vercel.json`](soc2-analyzer/frontend/vercel.json) — Vite build, SPA rewrites |
+| **Backend** | Render (Free tier) | [`render.yaml`](soc2-analyzer/render.yaml) — Python 3.11, Uvicorn start command |
 
 The `render.yaml` configures all required environment variable keys. Secret values (API keys, DB credentials) are set through the Render dashboard and are never committed to the repository.
 
@@ -385,17 +385,17 @@ The `render.yaml` configures all required environment variable keys. Secret valu
 | **Secret isolation** | All API keys (Groq, Supabase, DeepSeek, AWS) are kept strictly on the backend; never exposed to the frontend |
 | **No AI hallucination in scoring** | Pass/fail decisions are fully deterministic; LLMs only generate explanatory text |
 | **Error isolation** | AI failures and database failures are caught and do not leak internal details to API consumers |
-| **Backend JWT / RLS** | Not yet implemented â€” planned improvement (see below) |
+| **Backend JWT / RLS** | Not yet implemented — planned improvement (see below) |
 
 ---
 
 ## Future Improvements
 
-- **JWT authentication middleware** â€” Issue HttpOnly signed JWTs on login and validate on every protected route with FastAPI `Depends(verify_token)`
-- **Supabase Row Level Security** â€” Enforce per-user data isolation at the database layer
-- **Async LLM pipeline** â€” Decouple LLM generation from the HTTP request cycle using Celery + SQS; return deterministic scores immediately and stream AI explanations via WebSocket
-- **Vector RAG upgrade** â€” Chunk SOC 2 PDF manuals, generate embeddings with `text-embedding-3-small`, and store in Supabase pgvector for broader Q&A coverage
-- **Real-time AWS Config scanning** â€” Automate gap analysis using AWS Config rules rather than manual JSON upload
+- **JWT authentication middleware** — Issue HttpOnly signed JWTs on login and validate on every protected route with FastAPI `Depends(verify_token)`
+- **Supabase Row Level Security** — Enforce per-user data isolation at the database layer
+- **Async LLM pipeline** — Decouple LLM generation from the HTTP request cycle using Celery + SQS; return deterministic scores immediately and stream AI explanations via WebSocket
+- **Vector RAG upgrade** — Chunk SOC 2 PDF manuals, generate embeddings with `text-embedding-3-small`, and store in Supabase pgvector for broader Q&A coverage
+- **Real-time AWS Config scanning** — Automate gap analysis using AWS Config rules rather than manual JSON upload
 - **PDF export** of full gap analysis reports
 
 ---
